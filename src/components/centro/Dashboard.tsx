@@ -11,6 +11,7 @@ import DynamicMap, { type MapCircle, type MapMarker } from "../map/DynamicMap";
 import { Badge, Button, StateNotice } from "../ui";
 import CaseDetail from "./CaseDetail";
 import CaseQueue from "./CaseQueue";
+import FieldPhotos from "./FieldPhotos";
 import s from "./centro.module.css";
 
 const CALI: [number, number] = [3.4516, -76.532];
@@ -161,7 +162,9 @@ export default function Dashboard() {
           </div>
 
           <div className={s.col}>
-            <CaseDetail c={selected as Case | undefined} teams={data.teams} busy={busy} onAction={act} />
+            <CaseDetail c={selected as Case | undefined} teams={data.teams} busy={busy} onAction={act}>
+              {selected && <FieldPhotos c={selected as Case} onChanged={refresh} />}
+            </CaseDetail>
 
             <section className={s.panel} aria-labelledby="teams-title">
               <div className={s.panelHead}>
