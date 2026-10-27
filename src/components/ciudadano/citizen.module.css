@@ -1,0 +1,33 @@
+.shell {
+  min-height: 100dvh;
+  max-width: 28rem;
+  margin: 0 auto;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.header { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); }
+.title { margin: 0; font-size: var(--font-size-xl); line-height: 1.15; }
+.steps { display: flex; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.steps li { flex: 1; height: 0.5rem; border: var(--border-width) solid var(--color-border); border-radius: var(--radius-sm); }
+.steps li[data-done="true"] { background: var(--color-inverse-bg); }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+.grid .wide { grid-column: 1 / -1; }
+.label { font-size: var(--font-size-lg); font-weight: var(--font-weight-bold); }
+.counter { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.counterValue { font-size: var(--font-size-xxl); font-weight: var(--font-weight-bold); min-width: 3ch; text-align: center; }
+.bigRound { width: var(--tap-target-xl); min-height: var(--tap-target-xl); font-size: var(--font-size-xl); }
+.actions { display: flex; gap: var(--space-3); margin-top: auto; }
+.actions > * { flex: 1; }
+.transparency {
+  display: flex; gap: var(--space-2); align-items: flex-start;
+  font-size: var(--font-size-sm); color: var(--color-text-muted);
+  border-top: var(--border-width) solid var(--color-border-soft); padding-top: var(--space-3);
+}
+.mapBox { height: 12rem; }
+.meta { font-family: var(--font-mono); font-size: var(--font-size-sm); color: var(--color-text-muted); margin: 0; }
+.row { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
+.select { font: inherit; min-height: var(--tap-target); padding: 0 var(--space-3); border: var(--border-width) solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); width: 100%; }
+.recording { animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: 0.6; } }

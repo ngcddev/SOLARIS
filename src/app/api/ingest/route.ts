@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 const body = z.object({
   packets: z
-    .array(z.object({ packet: z.string().max(2000), path: z.array(z.string().max(40)).max(16).optional() }))
+    .array(z.object({ packet: z.string().max(120_000), path: z.array(z.string().max(40)).max(16).optional() }))
     .min(1)
     .max(300),
 });

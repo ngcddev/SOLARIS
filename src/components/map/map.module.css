@@ -1,0 +1,10 @@
+.map {
+  width: 100%;
+  min-height: 12rem;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-alt);
+  z-index: 0;
+}
+/* Grayscale basemap: keeps colour reserved for the critical-priority accent. */
+.tiles { filter: grayscale(1) contrast(1.05); }
