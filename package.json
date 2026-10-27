@@ -1,0 +1,34 @@
+{
+  "name": "solaris",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "Solaris: coordinación y priorización de SOS para las primeras 72 horas tras un desastre.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "scenario": "tsx scripts/scenario-cali-2026.ts",
+    "keys": "tsx scripts/generate-keys.ts"
+  },
+  "dependencies": {
+    "leaflet": "^1.9.4",
+    "libsodium-wrappers": "^0.8.4",
+    "next": "^16.4.3",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/leaflet": "^1.9.20",
+    "@types/libsodium-wrappers": "^0.7.14",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.0",
+    "vitest": "^5.0.5"
+  }
+}
