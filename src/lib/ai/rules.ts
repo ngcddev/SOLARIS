@@ -11,7 +11,7 @@ const KEYWORDS: { re: RegExp; score: number; tag: "trapped" | "baby" | "child" |
   { re: /sangr|herid|mucha sangre|bleeding|blood|wounded|injur/, score: 2, tag: "blood" },
   { re: /incendi|fuego|humo|quem|\bfire\b|smoke|burning/, score: 3, tag: "fire" },
   { re: /bebe|recien nacid|\bbaby|\bbabies|newborn|infant/, score: 2, tag: "baby" },
-  { re: /\bnino|\bnina|menor|hijo|hija|\bchild|\bkid|daughter/, score: 1, tag: "child" },
+  { re: /\bnino|\bnina|menor|hijo|hija|\bchild|\bkids?\b|daughter/, score: 1, tag: "child" },
   { re: /abuel|anciano|adulto mayor|tercera edad|elderly|grandmother|grandfather|older adult/, score: 1, tag: "elder" },
   { re: /colaps|se cayo|casa caida|edificio caido|collapse|fell down/, score: 1, tag: "collapse" },
 ];
@@ -32,10 +32,10 @@ export function triageByRules(input: TriageInput): TriageOutput {
   if (trapped && input.type !== "trapped") score += 3;
   if (tags.has("fire") && input.type !== "fire") score += 2;
   if (tags.has("blood") && input.type !== "bleeding") score += 1;
-  if (hasBabies) score += 2;
-  if (hasChildren) score += 1;
-  if (hasElderly) score += 1;
-  if (input.count >= 4) score += 1;
+  // Calibrated against the human-labeled dataset (docs/EVALUATION.md): any vulnerable person, or a group of
+  // 4+, escalates a case by one full priority level (+2); several vulnerable people do not stack.
+  if (hasBabies || hasChildren || hasElderly) score += 2;
+  if (input.count >= 4) score += 2;
   if (input.count >= 8) score += 1;
   if (input.waitMinutes >= 30) score += 1;
   if (input.waitMinutes >= 120) score += 1;

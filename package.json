@@ -11,9 +11,11 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "scenario": "tsx scripts/scenario-cali-2026.ts",
-    "keys": "tsx scripts/generate-keys.ts"
+    "keys": "tsx scripts/generate-keys.ts",
+    "eval": "tsx scripts/eval-triage.ts"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
     "leaflet": "^1.9.4",
     "libsodium-wrappers": "^0.8.4",
     "next": "^16.4.3",
