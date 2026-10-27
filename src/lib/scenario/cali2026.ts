@@ -1,6 +1,7 @@
 import type { EarthquakeEvent } from "../domain/types";
 import { buildMesh, flood, mulberry32, offsetM, type MeshNode } from "../mesh/graph";
 import { SIMULATED_AUDIO_PREFIX } from "../ai/mock";
+import { CALI_BARRIOS, CALI_GATEWAYS } from "./geography";
 import {
   buildAudioPacket,
   buildSosPacket,
@@ -21,18 +22,8 @@ import {
 
 export const CALI_CENTER = { lat: 3.4516, lon: -76.532 };
 
-const CLUSTERS = [
-  { name: "Centro", lat: 3.4516, lon: -76.532, weight: 0.25 },
-  { name: "San Antonio", lat: 3.45, lon: -76.539, weight: 0.2 },
-  { name: "El Peñón", lat: 3.454, lon: -76.544, weight: 0.15 },
-  { name: "Granada", lat: 3.465, lon: -76.533, weight: 0.15 },
-  { name: "Siloé", lat: 3.441, lon: -76.553, weight: 0.25 },
-];
-const GATEWAYS = [
-  { id: "gw-1", lat: 3.4531, lon: -76.5297 },
-  { id: "gw-2", lat: 3.462, lon: -76.532 },
-  { id: "gw-3", lat: 3.443, lon: -76.54 },
-];
+const CLUSTERS = CALI_BARRIOS;
+const GATEWAYS = CALI_GATEWAYS;
 
 const TEXT: Record<EmergencyType, string[]> = {
   trapped: [
