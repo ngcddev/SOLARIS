@@ -53,3 +53,13 @@
   --tap-target: 3rem;
   --tap-target-xl: 5.5rem;
 }
+
+/* priority scale: critical is the only accent color; the rest are neutral shades */
+:root {
+  --color-priority-1: var(--color-accent-critical);
+  --color-priority-2: #000000;
+  --color-priority-3: #5a5a5a;
+  --color-priority-4: #9a9a9a;
+  --color-team: #000000;
+  --color-node: #7a7a7a;
+}
