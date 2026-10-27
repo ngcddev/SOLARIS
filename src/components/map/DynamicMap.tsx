@@ -6,7 +6,7 @@ import { StateNotice } from "../ui";
 /** Leaflet touches `window`, so it is client-only. */
 const DynamicMap = dynamic(() => import("./LeafletMap"), {
   ssr: false,
-  loading: () => <StateNotice kind="loading">Cargando mapa…</StateNotice>,
+  loading: () => <StateNotice kind="loading">Loading map…</StateNotice>,
 });
 
 export default DynamicMap;

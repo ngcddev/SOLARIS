@@ -21,9 +21,9 @@ export function providersFor(mode: AiMode, cfg: MetaConfig = metaConfig()): Prov
 }
 
 export const MODE_LABEL: Record<AiMode, string> = {
-  meta: "IA: META API",
-  mock: "IA: SIMULADA",
-  rules: "SIN INTERNET: REGLAS",
+  meta: "AI: META API",
+  mock: "AI: SIMULATED",
+  rules: "OFFLINE: RULES",
 };
 
 export interface RunOptions {

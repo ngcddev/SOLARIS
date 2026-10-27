@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "license": "Apache-2.0",
-  "description": "Solaris: coordinación y priorización de SOS para las primeras 72 horas tras un desastre.",
+  "description": "Solaris: coordination and prioritization of SOS requests during the first 72 hours after a disaster.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

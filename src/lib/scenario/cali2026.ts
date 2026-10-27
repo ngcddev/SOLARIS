@@ -25,6 +25,7 @@ export const CALI_CENTER = { lat: 3.4516, lon: -76.532 };
 const CLUSTERS = CALI_BARRIOS;
 const GATEWAYS = CALI_GATEWAYS;
 
+// Citizen audio transcripts are intentionally in Spanish: realistic input data for the Cali scenario.
 const TEXT: Record<EmergencyType, string[]> = {
   trapped: [
     "Ayuda por favor, se nos cayó el techo y estamos atrapados bajo los escombros, somos {n}",
@@ -104,7 +105,7 @@ export async function buildCaliScenario(o: { centerPublicKey: Uint8Array; now: n
     lat: 3.4372,
     lon: -76.5225,
     magnitude: 6.1,
-    place: "Cali, Valle del Cauca — SISMO SIMULADO",
+    place: "Cali, Valle del Cauca — SIMULATED EARTHQUAKE",
     simulated: true,
   };
 
@@ -170,7 +171,7 @@ export async function buildCaliScenario(o: { centerPublicKey: Uint8Array; now: n
     stats.attacks.replay++;
   }
   if (secondDelivered) {
-    deliveries.push({ at: secondDelivered.sentAt + 6 * 60_000, packetB64: toBase64(secondDelivered.packet), path: ["ph-x", "lora-9", "gw-2"], label: "REPLAY TARDÍO" });
+    deliveries.push({ at: secondDelivered.sentAt + 6 * 60_000, packetB64: toBase64(secondDelivered.packet), path: ["ph-x", "lora-9", "gw-2"], label: "LATE REPLAY" });
     stats.attacks.late_replay++;
   }
 
@@ -184,7 +185,7 @@ export async function buildCaliScenario(o: { centerPublicKey: Uint8Array; now: n
       { type: "trapped", who: ["baby"], count: 5, lat: phone.lat, lon: phone.lon },
       { ...base, identity: { publicKey: victim.publicKey, secretKey: attacker.secretKey }, timestamp: ts(sentAt) },
     );
-    route(phone.id, packet, sentAt, "FIRMA INVÁLIDA", 2000, true);
+    route(phone.id, packet, sentAt, "INVALID SIGNATURE", 2000, true);
     stats.attacks.bad_signature++;
   }
 
@@ -195,9 +196,9 @@ export async function buildCaliScenario(o: { centerPublicKey: Uint8Array; now: n
     const identity = await idFor(phone.id);
     const sos: SosPayload = { type: "trapped", who: ["baby", "child"], count: 12, lat: 4.0868, lon: -76.1954 };
     const packet = buildSosPacket(sos, { ...base, identity, urgency: 1, timestamp: ts(sentAt) });
-    route(phone.id, packet, sentAt, "SOS FALSO");
+    route(phone.id, packet, sentAt, "FALSE SOS");
     const ap = buildAudioPacket({ parentId: packet.slice(4, 20), index: 0, total: 1, data: new TextEncoder().encode(SIMULATED_AUDIO_PREFIX + JOKE_TEXT) }, { ...base, identity, timestamp: ts(sentAt) + 1 });
-    route(phone.id, ap, sentAt, "Audio falso", 3500);
+    route(phone.id, ap, sentAt, "False audio", 3500);
     stats.attacks.false_sos++;
   }
 
@@ -208,7 +209,7 @@ export async function buildCaliScenario(o: { centerPublicKey: Uint8Array; now: n
     for (let i = 0; i < 8; i++) {
       const sentAt = now - 12 * 60_000 + i * 6_000;
       const packet = buildSosPacket({ type: "other", who: ["adult"], count: 1, lat: phone.lat, lon: phone.lon }, { ...base, identity, timestamp: ts(sentAt) });
-      const d = route(phone.id, packet, sentAt, "RÁFAGA", 2000, true);
+      const d = route(phone.id, packet, sentAt, "BURST", 2000, true);
       if (d.length) stats.attacks.burst++;
     }
   }
@@ -221,7 +222,7 @@ export async function buildCaliScenario(o: { centerPublicKey: Uint8Array; now: n
     revoked.push(toHex(identity.publicKey));
     const sentAt = now - 9 * 60_000;
     const packet = buildSosPacket({ type: "bleeding", who: ["adult"], count: 2, lat: phone.lat, lon: phone.lon }, { ...base, identity, timestamp: ts(sentAt) });
-    route(phone.id, packet, sentAt, "REVOCADA", 2000, true);
+    route(phone.id, packet, sentAt, "REVOKED", 2000, true);
     stats.attacks.revoked++;
   }
 

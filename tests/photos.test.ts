@@ -23,11 +23,11 @@ describe("field photos (SAM 3.1 mock)", () => {
   }
 
   it("mock segmentation is deterministic and returns normalised polygons", async () => {
-    const phrases = ["persona", "estructura colapsada", "vía bloqueada"];
+    const phrases = ["person", "collapsed structure", "blocked road"];
     const a = await mockVision.segment({ imageDataUrl: IMG, phrases });
     const b = await mockVision.segment({ imageDataUrl: IMG, phrases });
     expect(a).toEqual(b);
-    expect(a.find((f) => f.phrase === "persona")!.count).toBeGreaterThanOrEqual(1);
+    expect(a.find((f) => f.phrase === "person")!.count).toBeGreaterThanOrEqual(1);
     for (const f of a) for (const m of f.masks) for (const [x, y] of m.points) { expect(x).toBeGreaterThanOrEqual(0); expect(x).toBeLessThanOrEqual(1); expect(y).toBeGreaterThanOrEqual(0); expect(y).toBeLessThanOrEqual(1); }
   });
 

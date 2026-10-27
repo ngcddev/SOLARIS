@@ -28,14 +28,14 @@ describe("end to end: packet -> ingest -> triage -> trust -> queue -> actions", 
     expect(s.cases[0].triage?.priority).toBe("P1");
     expect(s.cases[0].trust?.signals.length).toBeGreaterThanOrEqual(5);
     expect(s.metrics).toMatchObject({ received: 1, accepted: 1, prioritized: 1 });
-    expect(s.modeLabel).toBe("IA: SIMULADA");
+    expect(s.modeLabel).toBe("AI: SIMULATED");
   });
 
   it("switches to rules when internet is simulated down and keeps working", async () => {
     setOffline(true);
     await send();
     const s = await getState();
-    expect(s.modeLabel).toBe("SIN INTERNET: REGLAS");
+    expect(s.modeLabel).toBe("OFFLINE: RULES");
     expect(s.cases[0].triage?.source).toBe("rules");
   });
 

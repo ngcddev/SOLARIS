@@ -2,16 +2,16 @@ import type { Metadata, Viewport } from "next";
 import "../styles/globals.css";
 
 export const metadata: Metadata = {
-  title: "Solaris — coordinación de rescate",
+  title: "Solaris — rescue coordination",
   description:
-    "Coordinación y priorización de pedidos de ayuda en las primeras 72 horas tras un desastre. Herramienta de apoyo a rescatistas, con validación humana.",
+    "Coordination and prioritization of help requests in the first 72 hours after a disaster. A support tool for rescuers, with human validation.",
 };
 
 export const viewport: Viewport = { width: "device-width", initialScale: 1 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es-CO">
+    <html lang="en">
       <body>{children}</body>
     </html>
   );

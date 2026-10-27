@@ -8,25 +8,25 @@ import { initCrypto } from "../src/lib/packet";
 
 async function main() {
   await initCrypto();
-  console.log("Escenario: sismo SIMULADO en Cali, 2026 (datos ficticios)\n");
+  console.log("Scenario: SIMULATED earthquake in Cali, 2026 (fictional data)\n");
   const run = await loadCaliScenario();
   const state = await getState();
-  console.log(`Evento: ${run.eventPlace}`);
-  console.log(`Modo de IA: ${state.modeLabel}`);
-  console.log(`Llegadas al centro: ${run.deliveries} (${run.validSos} SOS válidos + duplicados por varios caminos + ataques)`);
-  console.log(`  aceptados: ${run.outcome.accepted}, duplicados fusionados: ${run.outcome.duplicates}`);
-  console.log(`  rechazados: ${JSON.stringify(run.outcome.rejectedByReason)}`);
+  console.log(`Event: ${run.eventPlace}`);
+  console.log(`AI mode: ${state.modeLabel}`);
+  console.log(`Arrivals at the center: ${run.deliveries} (${run.validSos} valid SOS + multi-path duplicates + attacks)`);
+  console.log(`  accepted: ${run.outcome.accepted}, duplicates merged: ${run.outcome.duplicates}`);
+  console.log(`  rejected: ${JSON.stringify(run.outcome.rejectedByReason)}`);
   const lows = state.cases.filter((c) => c.needsReview);
-  console.log(`  casos con baja confianza (revisión humana, no descartados): ${lows.length}`);
+  console.log(`  low-confidence cases (human review, not discarded): ${lows.length}`);
   const byP = { P1: 0, P2: 0, P3: 0, P4: 0 } as Record<string, number>;
   state.cases.forEach((c) => byP[c.priority]++);
-  console.log(`  prioridades: ${JSON.stringify(byP)}`);
-  console.log(`  procesado en ${run.elapsedMs} ms\n`);
+  console.log(`  priorities: ${JSON.stringify(byP)}`);
+  console.log(`  processed in ${run.elapsedMs} ms\n`);
 
   const b = await runBenchmark(100);
-  console.log(`Benchmark (${b.mode}): ${b.count} SOS priorizados en ${b.totalMs} ms (${b.perSosMs} ms/SOS)`);
-  console.log(`Revisión manual estimada (${MANUAL_MINUTES_PER_SOS} min por SOS): ${b.manualMinutes} min -> ~${b.speedup.toLocaleString("es-CO")}x más rápido`);
-  console.log("La IA solo propone; la validación y el despacho siempre los decide una persona.");
+  console.log(`Benchmark (${b.mode}): ${b.count} SOS prioritized in ${b.totalMs} ms (${b.perSosMs} ms/SOS)`);
+  console.log(`Estimated manual review (${MANUAL_MINUTES_PER_SOS} min per SOS): ${b.manualMinutes} min -> ~${b.speedup.toLocaleString("en-US")}x faster`);
+  console.log("The AI only proposes; validation and dispatch are always decided by a person.");
 }
 
 main().catch((e) => {

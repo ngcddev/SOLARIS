@@ -26,6 +26,20 @@ export const FORBIDDEN_MEDICAL_TERMS = [
   "primeros auxilios",
   "usted debe",
   "debes ",
+  // English
+  "treatment",
+  "medication",
+  "tourniquet",
+  "bandage",
+  "apply pressure",
+  "do not move",
+  "cpr",
+  "resuscitat",
+  "dosage",
+  "fracture",
+  "hemorrhage",
+  "first aid",
+  "you must",
 ];
 
 export function containsMedicalAdvice(text: string): boolean {
@@ -34,4 +48,4 @@ export function containsMedicalAdvice(text: string): boolean {
 }
 
 export const SAFE_FALLBACK_JUSTIFICATION =
-  "Prioridad calculada por vulnerabilidad de las personas reportadas y condiciones del lugar. Requiere validación del rescatista.";
+  "Priority computed from the vulnerability of the people reported and site conditions. Requires rescuer validation.";

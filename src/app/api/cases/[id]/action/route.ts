@@ -12,7 +12,7 @@ const body = z.object({
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const parsed = body.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Solicitud no válida" }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   const res = await applyAction(id, parsed.data.action, parsed.data.teamId);
   return NextResponse.json(res, { status: res.ok ? 200 : 409 });
 }

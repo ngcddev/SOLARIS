@@ -14,7 +14,7 @@ import { DEFAULT_TEAMS, getRuntime } from "./runtime";
 /** Application service used by the API routes and the scenario script. */
 
 const CODEC2_BPS = 1200; // theoretical Codec2 bitrate; real Codec2 is out of scope (docs/ASSUMPTIONS.md)
-const PHOTO_PHRASES = ["persona", "estructura colapsada", "vía bloqueada"];
+const PHOTO_PHRASES = ["person", "collapsed structure", "blocked road"];
 
 export function currentMode(): AiMode {
   return selectMode(getRuntime().offline);
@@ -109,7 +109,7 @@ export async function analyzeCase(caseId: string, now = Date.now()) {
     const isWav = audio.length > 44 && audio[0] === 0x52;
     const seconds = isWav ? Math.round((audio.length - 44) / 32000) : Math.max(3, Math.round(tr.text.length / 14));
     c.audio = { bytes: audio.length, seconds, codec2TheoreticalBytes: Math.ceil((seconds * CODEC2_BPS) / 8) };
-    c.events.push({ at: now, kind: "audio", note: `Audio recibido (${seconds} s)` });
+    c.events.push({ at: now, kind: "audio", note: `Audio received (${seconds} s)` });
   }
 
   const hadTriage = !!c.triage;
@@ -127,7 +127,7 @@ export async function analyzeCase(caseId: string, now = Date.now()) {
   );
   c.triage = triage;
   c.triagedAt = now;
-  c.events.push({ at: now, kind: hadTriage ? "retriaged" : "triaged", note: `Triage ${triage.priority} (${triage.source === "rules" ? "reglas" : triage.source === "mock" ? "simulado" : "Meta"})` });
+  c.events.push({ at: now, kind: hadTriage ? "retriaged" : "triaged", note: `Triage ${triage.priority} (${triage.source === "rules" ? "rules" : triage.source === "mock" ? "simulated" : "Meta"})` });
   await repo.saveCase(c);
   await refreshTrust(now);
 }
@@ -194,7 +194,7 @@ export type CaseAction = "validate" | "false" | "assign" | "dispatch" | "close";
 export async function applyAction(caseId: string, action: CaseAction, teamId?: string, now = Date.now()): Promise<{ ok: boolean; error?: string }> {
   const repo = getRepository();
   const c = await repo.getCase(caseId);
-  if (!c) return { ok: false, error: "Caso no encontrado" };
+  if (!c) return { ok: false, error: "Case not found" };
   const setStatus = (status: CaseStatus, kind: Case["events"][number]["kind"], note: string) => {
     c.status = status;
     c.events.push({ at: now, kind, note });
@@ -203,34 +203,34 @@ export async function applyAction(caseId: string, action: CaseAction, teamId?: s
 
   switch (action) {
     case "validate":
-      setStatus("validated", "validated", "Validado por el brigadista");
+      setStatus("validated", "validated", "Validated by the rescuer");
       c.needsReview = false;
       break;
     case "false":
-      setStatus("false", "marked_false", "Marcado como falso por el brigadista");
+      setStatus("false", "marked_false", "Marked as false by the rescuer");
       break;
     case "assign": {
       const team = (await repo.listTeams()).find((t) => t.id === teamId);
-      if (!team) return { ok: false, error: "Equipo no encontrado" };
-      if (team.status !== "available") return { ok: false, error: "El equipo no está disponible" };
+      if (!team) return { ok: false, error: "Team not found" };
+      if (team.status !== "available") return { ok: false, error: "Team is not available" };
       const prev = await freeTeam();
       if (prev) await repo.saveTeam({ ...prev, status: "available" });
       await repo.saveTeam({ ...team, status: "assigned" });
       c.assignedTeamId = team.id;
-      setStatus("assigned", "assigned", `Asignado a ${team.name}`);
+      setStatus("assigned", "assigned", `Assigned to ${team.name}`);
       break;
     }
     case "dispatch": {
       const team = await freeTeam();
-      if (!team) return { ok: false, error: "Primero asigna un equipo" };
+      if (!team) return { ok: false, error: "Assign a team first" };
       await repo.saveTeam({ ...team, status: "dispatched" });
-      setStatus("dispatched", "dispatched", `${team.name} despachado`);
+      setStatus("dispatched", "dispatched", `${team.name} dispatched`);
       break;
     }
     case "close": {
       const team = await freeTeam();
       if (team) await repo.saveTeam({ ...team, status: "available" });
-      setStatus("closed", "closed", "Caso cerrado");
+      setStatus("closed", "closed", "Case closed");
       break;
     }
   }
@@ -265,11 +265,11 @@ export async function recommendAssignments(now = Date.now()) {
 export async function addFieldPhoto(caseId: string, dataUrl: string, now = Date.now()): Promise<{ ok: boolean; error?: string }> {
   const repo = getRepository();
   const c = await repo.getCase(caseId);
-  if (!c) return { ok: false, error: "Caso no encontrado" };
-  if (!/^data:image\/(png|jpe?g|webp);base64,/.test(dataUrl) || dataUrl.length > 6_000_000) return { ok: false, error: "Imagen no válida o demasiado grande" };
+  if (!c) return { ok: false, error: "Case not found" };
+  if (!/^data:image\/(png|jpe?g|webp);base64,/.test(dataUrl) || dataUrl.length > 6_000_000) return { ok: false, error: "Invalid or too large image" };
   const { findings, source } = await runVision({ imageDataUrl: dataUrl, phrases: PHOTO_PHRASES }, runOptions());
   c.photos.push({ id: `ph-${c.photos.length + 1}`, uploadedAt: now, dataUrl, findings, source });
-  c.events.push({ at: now, kind: "photo", note: source === "rules" ? "Foto de campo subida (sin análisis: modo reglas)" : `Foto de campo analizada (${findings.map((f) => `${f.phrase}: ${f.count}`).join(", ")})` });
+  c.events.push({ at: now, kind: "photo", note: source === "rules" ? "Field photo uploaded (no analysis: rules mode)" : `Field photo analyzed (${findings.map((f) => `${f.phrase}: ${f.count}`).join(", ")})` });
   await repo.saveCase(c);
   await refreshTrust(now);
   return { ok: true };

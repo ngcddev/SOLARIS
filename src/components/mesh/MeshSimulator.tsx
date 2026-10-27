@@ -78,7 +78,7 @@ export default function MeshSimulator() {
       color: isOrigin ? cssVar("--color-accent-critical") : n.kind === "phone" ? cssVar("--color-node") : cssVar("--color-team"),
       radius: n.kind === "gateway" ? 10 : n.kind === "lora" ? 8 : 6,
       filled: isOrigin || got || n.kind === "gateway",
-      label: `${n.id}${out ? " (sin permiso)" : ""}${counts[n.id] ? ` · retransmitió ${counts[n.id]}` : ""}`,
+      label: `${n.id}${out ? " (no permission)" : ""}${counts[n.id] ? ` · relayed ${counts[n.id]}` : ""}`,
       selected: n.id === lastRelayId,
     };
   });
@@ -94,75 +94,75 @@ export default function MeshSimulator() {
   return (
     <div className={s.page}>
       <header className={s.top}>
-        <h1>Solaris · Simulador de malla</h1>
-        <Link href="/">Inicio</Link>
-        <Link href="/centro">Centro de mando</Link>
-        <Link href="/ciudadano">Simulador ciudadano</Link>
-        <Badge tone="muted">Simulación visual: la malla BLE/LoRa real está en la hoja de ruta</Badge>
+        <h1>Solaris · Mesh simulator</h1>
+        <Link href="/">Home</Link>
+        <Link href="/command-center">Command center</Link>
+        <Link href="/citizen">Citizen simulator</Link>
+        <Badge tone="muted">Visual simulation: the real BLE/LoRa mesh is on the roadmap</Badge>
       </header>
       <main className={s.body}>
         <div className={s.col}>
           <div className={s.mapBox}>
             <DynamicMap center={[cluster.lat, cluster.lon]} zoom={17} markers={markers} lines={lines} circles={circles}
               onMarkerClick={(id) => { const n = byId.get(id); if (n?.kind === "phone") setOptedOut((cur) => { const x = new Set(cur); x.has(id) ? x.delete(id) : x.add(id); return x; }); }}
-              ariaLabel="Mapa de la malla: teléfonos, nodos LoRa y pasarelas" />
+              ariaLabel="Mesh map: phones, LoRa nodes and gateways" />
           </div>
-          <p className={s.hint}>Toca un teléfono para quitarle o darle el permiso de retransmitir. Círculo = alcance Bluetooth del emisor. Rojo = quien pide ayuda; negro = LoRa / pasarela.</p>
+          <p className={s.hint}>Tap a phone to take away or grant its permission to relay. Circle = Bluetooth range of the sender. Red = the person asking for help; black = LoRa / gateway.</p>
         </div>
 
         <div className={s.col}>
           <section className={s.panel} aria-labelledby="ctl">
-            <div className={s.panelHead}><h2 id="ctl">Controles</h2></div>
+            <div className={s.panelHead}><h2 id="ctl">Controls</h2></div>
             <div className={s.panelBody}>
-              <label className={s.field}>Barrio
+              <label className={s.field}>Neighborhood
                 <select className={s.select} value={barrio} onChange={(e) => { setBarrio(e.target.value); setOriginId(mesh.phonesByCluster.get(e.target.value)![0].id); setResult(null); }}>
                   {CALI_BARRIOS.map((b) => <option key={b.name}>{b.name}</option>)}
                 </select><span />
               </label>
-              <label className={s.field}>Emisor
+              <label className={s.field}>Sender
                 <select className={s.select} value={origin} onChange={(e) => { setOriginId(e.target.value); setResult(null); }}>
                   {phones.map((p) => <option key={p.id} value={p.id}>{p.id}</option>)}
                 </select><span />
               </label>
-              <label className={s.field}>Alcance BLE
+              <label className={s.field}>BLE range
                 <input type="range" min={30} max={120} value={range} onChange={(e) => setRange(Number(e.target.value))} /><span>{range} m</span>
               </label>
-              <label className={s.field}>TTL inicial
-                <input type="range" min={2} max={14} value={ttl} onChange={(e) => setTtl(Number(e.target.value))} /><span>{ttl} saltos</span>
+              <label className={s.field}>Initial TTL
+                <input type="range" min={2} max={14} value={ttl} onChange={(e) => setTtl(Number(e.target.value))} /><span>{ttl} hops</span>
               </label>
               <div className={s.actions}>
-                <Button variant="primary" onClick={send} disabled={playing}><Icon name="send" size={18} /> Enviar SOS simulado</Button>
-                <Button onClick={() => { setResult(null); setStep(0); setCounts({}); }}>Reiniciar contadores</Button>
+                <Button variant="primary" onClick={send} disabled={playing}><Icon name="send" size={18} /> Send simulated SOS</Button>
+                <Button onClick={() => { setResult(null); setStep(0); setCounts({}); }}>Reset counters</Button>
               </div>
             </div>
           </section>
 
           <section className={s.panel} aria-labelledby="res">
-            <div className={s.panelHead}><h2 id="res">Resultado</h2></div>
+            <div className={s.panelHead}><h2 id="res">Result</h2></div>
             <div className={s.panelBody} aria-live="polite">
               <dl className={s.stats}>
-                <div><dt>Nodos alcanzados</dt><dd>{reached.size}</dd></div>
-                <div><dt>Copias descartadas (dedup)</dt><dd>{suppressedShown}</dd></div>
-                <div><dt>Llegadas al centro</dt><dd>{delivered.length}</dd></div>
-                <div><dt>Salto actual</dt><dd>{Math.min(step, maxStep)}/{maxStep}</dd></div>
+                <div><dt>Nodes reached</dt><dd>{reached.size}</dd></div>
+                <div><dt>Copies dropped (dedup)</dt><dd>{suppressedShown}</dd></div>
+                <div><dt>Arrivals at the center</dt><dd>{delivered.length}</dd></div>
+                <div><dt>Current hop</dt><dd>{Math.min(step, maxStep)}/{maxStep}</dd></div>
               </dl>
-              {result && result.deliveries.length === 0 && step > maxStep && <p className={s.hint}>El mensaje no llegó a ninguna pasarela: TTL agotado, alcance corto o teléfonos sin permiso.</p>}
-              {delivered.map((d) => <p key={d.gateway} className={s.hint}>Camino a {d.gateway}: {d.path.join(" → ")} ({d.path.length} saltos)</p>)}
-              <ol className={s.log} aria-label="Saltos">
+              {result && result.deliveries.length === 0 && step > maxStep && <p className={s.hint}>The message did not reach any gateway: TTL exhausted, short range or phones without permission.</p>}
+              {delivered.map((d) => <p key={d.gateway} className={s.hint}>Path to {d.gateway}: {d.path.join(" → ")} ({d.path.length} hops)</p>)}
+              <ol className={s.log} aria-label="Hops">
                 {shown.slice(-40).map((h, i) => <li key={i}>#{h.step} {h.from} → {h.to} · TTL {h.ttl}</li>)}
               </ol>
             </div>
           </section>
 
           <section className={s.panel} aria-labelledby="phone">
-            <div className={s.panelHead}><h2 id="phone">Vista del teléfono que retransmite</h2></div>
+            <div className={s.panelHead}><h2 id="phone">View of the relaying phone</h2></div>
             <div className={s.panelBody}>
               <div className={s.phone} role="status">
-                <small>Solaris · ahora</small>
-                <strong>Solaris está retransmitiendo SOS cercanos por Bluetooth</strong>
-                <small>{lastRelayId ? `${lastRelayId}: Has retransmitido ${counts[lastRelayId] ?? 0} pedidos de ayuda` : "Aún no has retransmitido pedidos de ayuda"}</small>
+                <small>Solaris · now</small>
+                <strong>Solaris is relaying nearby SOS messages over Bluetooth</strong>
+                <small>{lastRelayId ? `${lastRelayId}: You have relayed ${counts[lastRelayId] ?? 0} help requests` : "You have not relayed any help requests yet"}</small>
               </div>
-              <p className={s.hint}>Tu teléfono no puede leer los SOS que retransmite: viajan cifrados. Solo retransmite con permiso explícito y con esta notificación siempre visible.</p>
+              <p className={s.hint}>Your phone cannot read the SOS messages it relays: they travel encrypted. It only relays with explicit permission and with this notification always visible.</p>
             </div>
           </section>
         </div>

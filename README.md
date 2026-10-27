@@ -1,122 +1,126 @@
 # Solaris
 
-Plataforma de **coordinación y priorización de pedidos de ayuda (SOS)** para las **primeras 72 horas después de un desastre**, cuando la información y los recursos están desorganizados. Proyecto de la *Meta Global AI Developer Hackathon* (track Indie Developer, tema "Build for Your World").
+A platform for **coordinating and prioritizing help requests (SOS) during the first 72 hours after a disaster**, when information and resources are disorganized. Built for the *Meta Global AI Developer Hackathon* (Indie Developer track, theme "Build for Your World").
 
-> **Solaris no diagnostica ni da consejos médicos.** Es una herramienta de coordinación de recursos para rescatistas. La IA propone; **cada validación, asignación y despacho lo decide una persona**.
+> **Solaris does not diagnose or give medical advice.** It is a resource-coordination tool for rescuers. The AI proposes; **every validation, assignment and dispatch is decided by a human**.
 
-## El problema
+## The problem
 
-Tras un sismo, los pedidos de ayuda llegan por canales caóticos: llamadas saturadas, mensajes duplicados, audios, rumores y reportes falsos. El centro de mando no sabe a quién atender primero ni cómo repartir los equipos, y la infraestructura (internet, celdas) suele fallar justo cuando más se necesita.
+After an earthquake, help requests arrive through chaotic channels: saturated phone lines, duplicated messages, audio clips, rumors and false reports. The command center does not know whom to attend first or how to distribute rescue teams, and infrastructure (internet, cell towers) often fails exactly when it is needed most.
 
-## Qué hace Solaris
+## What Solaris does
 
-1. **Ciudadano:** envía un SOS con botones grandes (máx. 3 toques) y un audio opcional de hasta 15 s. El celular lo **firma (Ed25519) y lo cifra** hacia la llave pública del centro de mando.
-2. **Transporte:** el paquete salta de teléfono en teléfono por Bluetooth (y troncal LoRa) hasta una pasarela. Los teléfonos puente **no pueden leer** el contenido.
-3. **Ingesta segura:** el centro verifica firma, descifra, bloquea repeticiones y duplicados, limita por identidad y respeta una lista de revocación.
-4. **IA en 3 niveles:** Meta Model API → (hoja de ruta: modelo abierto local) → **reglas por palabras clave** que siempre funcionan, sin internet.
-5. **Decisión:** mapa, cola priorizada, **puntaje de confianza** con desglose, recomendación de asignación de equipos, validación del brigadista y despacho.
+1. **Citizen:** sends an SOS with big buttons (3 taps max) and an optional audio clip of up to 15 s. The phone **signs (Ed25519) and encrypts** the message towards the command center's public key.
+2. **Transport:** the packet hops from phone to phone over Bluetooth (plus an optional LoRa trunk) to a gateway. Relay phones **cannot read** the content.
+3. **Secure ingestion:** the center verifies the signature, decrypts, blocks replays and duplicates, rate-limits per identity and honors a revocation list.
+4. **Three AI levels:** Meta Model API → (roadmap: local open Meta model) → **keyword rules** that always work, with no internet.
+5. **Decision:** map, prioritized queue, **confidence score** with breakdown, resource-assignment recommendation, rescuer validation and dispatch.
 
-## Demo (sin credenciales)
+## Demo (no credentials needed)
 
 ```bash
 npm install
 npm run dev          # http://localhost:3000
 ```
 
-| Ruta | Qué muestra |
+| Route | What it shows |
 |---|---|
-| `/centro` | Panel del centro de mando. Botón **Cargar escenario Cali 2026**, **Benchmark 100 SOS**, **Simular caída de internet**, **Recomendar asignación**. |
-| `/ciudadano` | Simulador mobile-first: genera paquetes **reales** firmados y cifrados (179 bytes por SOS de botones). |
-| `/malla` | Simulación visual de la malla Bluetooth: alcance, TTL, deduplicación por nodo, permiso de retransmisión. |
+| `/command-center` | Command center dashboard. Buttons: **Load Cali 2026 scenario**, **Benchmark 100 SOS**, **Simulate internet outage**, **Recommend assignment**. |
+| `/citizen` | Mobile-first citizen simulator: generates **real** signed and encrypted packets (179 bytes per button-only SOS). |
+| `/mesh` | Visual simulation of the Bluetooth mesh: range, TTL, per-node deduplication, relay permission. |
 
-Guion sugerido (2 min): cargar el escenario → ver cola y mapa → abrir el SOS falso (confianza baja, **no descartado**, marcado para revisión) → ver las defensas activas (replay, firma inválida, ráfaga, identidad revocada) → "Simular caída de internet" y reenviar → "Recomendar asignación" y aceptar/rechazar → subir una foto de campo.
+Suggested 2-minute walkthrough: load the scenario → look at the queue and map → open the false SOS (low confidence, **not discarded**, flagged for review) → look at the active defenses (replay, invalid signature, burst, revoked identity) → "Simulate internet outage" and send another SOS → "Recommend assignment" and accept/reject → upload a field photo.
 
-### Comandos
+### Commands
 
 ```bash
-npm run dev        # servidor de desarrollo
-npm run test       # Vitest (58 pruebas)
-npm run keys       # genera el par de llaves del centro (-- --write las guarda en .env.local)
-npm run scenario   # corre el escenario Cali 2026 en proceso + benchmark, sin servidor
-npm run build      # build de producción
+npm run dev        # development server
+npm run test       # Vitest
+npm run keys       # generates the command center key pair (-- --write saves it to .env.local)
+npm run scenario   # runs the Cali 2026 scenario in-process + benchmark, no server needed
+npm run build      # production build
 ```
 
-Todo funciona **sin ninguna credencial**: sin `META_API_KEY` la IA corre en modo **simulado** (determinista); sin llaves del centro se genera un par efímero en memoria.
+Everything works **with no credentials**: without `META_API_KEY` the AI runs in deterministic **simulated** mode; without command center keys an ephemeral in-memory pair is generated.
 
-## Modelos de Meta y para qué se usan
+## Meta models used and why
 
-| Modelo | Uso en Solaris | Cuándo se llama |
+| Model | Use in Solaris | When it is called |
 |---|---|---|
-| **Muse Spark** (`muse-spark-1.3`) | Triage por SOS: tipo, personas, vulnerables, atrapamiento, prioridad P1–P4 y justificación corta para el rescatista. Salida JSON validada con Zod. | Una vez por SOS (barato). |
-| **Muse Voice Transcribe 1.0** | Transcribe el audio del SOS con sesgo por palabras clave de emergencia. | Solo si hay audio. |
-| **Muse Wonder** (`muse-wonder-1.0`) | Analista del centro: propone la asignación de equipos a todos los casos activos (JSON schema). | **Solo bajo demanda** (botón); es caro. |
-| **SAM 3.1** | Segmenta "persona", "estructura colapsada", "vía bloqueada" en fotos de brigadistas; el resultado **alimenta la confianza y la prioridad** del caso. | Al subir una foto. |
+| **Muse Spark** (`muse-spark-1.3`) | Per-SOS triage: type, people, vulnerable groups, entrapment, priority P1–P4 and a short rescuer-oriented justification. JSON output validated with Zod. | Once per SOS (cheap). |
+| **Muse Voice Transcribe 1.0** | Transcribes the SOS audio with keyword biasing towards emergency vocabulary. | Only if there is audio. |
+| **Muse Wonder** (`muse-wonder-1.0`) | Command center analyst: proposes team assignments for all active cases (JSON schema). | **On demand only** (button); it is the expensive one. |
+| **SAM 3.1** | Segments "person", "collapsed structure", "blocked road" in rescuer photos; the result **feeds the case's confidence and priority**. | When a photo is uploaded. |
 
-Cada modelo está detrás de una interfaz (`TranscriptionProvider`, `TriageProvider`, `AnalystProvider`, `VisionProvider`) con implementación `meta` y `mock`. El indicador visible en el panel muestra `IA: META API`, `IA: SIMULADA` o `SIN INTERNET: REGLAS`. Si una llamada falla, no valida o devuelve lenguaje médico, el sistema **cae a reglas y sigue funcionando**. Detalle de supuestos en [`docs/ASSUMPTIONS.md`](docs/ASSUMPTIONS.md).
+Each model sits behind an interface (`TranscriptionProvider`, `TriageProvider`, `AnalystProvider`, `VisionProvider`) with a `meta` and a `mock` implementation. A visible indicator in the dashboard shows `AI: META API`, `AI: SIMULATED` or `OFFLINE: RULES`. If a call fails, does not validate or returns medical language, the system **falls back to rules and keeps working**. Details in [`docs/ASSUMPTIONS.md`](docs/ASSUMPTIONS.md).
 
-## Confianza y SOS falsos
+## Confidence and false SOS
 
-Puntaje 0–100 con desglose visible: firma/identidad, evento sísmico activo (tiempo y espacio), otros SOS cercanos, proximidad de los nodos que retransmitieron (el alcance Bluetooth corrobora la ubicación), coherencia del contenido y evidencia de foto de campo. **Regla ética:** un SOS de baja confianza **nunca se descarta**; solo baja un nivel de prioridad y queda marcado para revisión humana.
+A 0–100 score with a visible breakdown: signature/identity, active seismic event (time and space), other nearby SOS, proximity of the nodes that relayed the message (Bluetooth range corroborates the reported location), content coherence and field-photo evidence. **Ethical rule:** a low-confidence SOS is **never discarded**; it only drops one priority level and is flagged for human review.
 
-## Arquitectura
+## Architecture
 
 ```mermaid
 flowchart LR
-  subgraph Construido["Construido en este MVP"]
-    SIM["Simulador ciudadano (web)\nfirma Ed25519 + cifrado sellado"] --> MESH
-    MESH["Simulador de malla\nBLE ~50 m · TTL · dedup por nodo"] --> GW["API /ingest (pasarela)"]
-    GW --> ING["Ingesta segura\nfirma · anti-replay · dedup · límites · revocación"]
-    ING --> AI{"Orquestador de IA"}
-    AI -->|N1| META["Meta Model API\nSpark · Wonder · Voice · SAM 3.1"]
-    AI -->|simulado| MOCK["Mocks deterministas"]
-    AI -->|N3| RULES["Reglas por palabras clave"]
-    AI --> TRUST["Puntaje de confianza"]
-    TRUST --> UI["Panel del centro de mando\nmapa · cola · detalle · acciones"]
-    UI --> HUMAN(("Brigadista\nvalida y despacha"))
-    PHOTO["Foto de campo (brigadista/dron)"] --> AI
+  subgraph Built["Built in this MVP"]
+    SIM["Citizen simulator (web)\nEd25519 signature + sealed-box encryption"] --> MESH
+    MESH["Mesh simulator\nBLE ~50 m · TTL · per-node dedup"] --> GW["API /ingest (gateway)"]
+    GW --> ING["Secure ingestion\nsignature · anti-replay · dedup · limits · revocation"]
+    ING --> AI{"AI orchestrator"}
+    AI -->|L1| META["Meta Model API\nSpark · Wonder · Voice · SAM 3.1"]
+    AI -->|simulated| MOCK["Deterministic mocks"]
+    AI -->|L3| RULES["Keyword rules"]
+    AI --> TRUST["Confidence score"]
+    TRUST --> UI["Command center dashboard\nmap · queue · detail · actions"]
+    UI --> HUMAN(("Rescuer\nvalidates and dispatches"))
+    PHOTO["Field photo (rescuer/drone)"] --> AI
   end
-  subgraph Roadmap["Hoja de ruta (fuera de alcance)"]
-    APP["App nativa Android/iOS"] -.-> BLE["Malla BLE real"]
-    BLE -.-> LORA["Nodos LoRa reales"]
+  subgraph Roadmap["Roadmap (out of scope)"]
+    APP["Native Android/iOS app"] -.-> BLE["Real BLE mesh"]
+    BLE -.-> LORA["Real LoRa nodes"]
     LORA -.-> GW
-    SMS["Verificación por SMS"] -.-> ING
-    N2["Modelo abierto de Meta local (N2)"] -.-> AI
-    C2["Codec2 real para audio"] -.-> APP
+    SMS["SMS verification"] -.-> ING
+    N2["Local open Meta model (L2)"] -.-> AI
+    C2["Real Codec2 audio"] -.-> APP
   end
 ```
 
-| Componente | Estado |
+| Component | Status |
 |---|---|
-| Panel del centro de mando, ingesta segura, triage, confianza, recomendación, fotos | **Real** (IA detrás de adaptador con mock) |
-| App del ciudadano | **Simulador web** que genera paquetes reales |
-| Malla Bluetooth / LoRa | **Simulación visual** |
-| App nativa, malla BLE real, LoRa real, SMS, modelo local N2, Codec2 | **Hoja de ruta** |
+| Command center dashboard, secure ingestion, triage, confidence, recommendation, photos | **Real** (AI behind an adapter with a mock) |
+| Citizen app | **Web simulator** that generates real packets |
+| Bluetooth / LoRa mesh | **Visual simulation** |
+| Native app, real BLE mesh, real LoRa, SMS, local L2 model, Codec2 | **Roadmap** |
 
-## Paquete SOS
+## SOS packet
 
-Encabezado en claro de 24 bytes (versión, urgencia, TTL, banderas, ID aleatorio de 16 bytes, timestamp) + cuerpo cifrado con `crypto_box_seal` que contiene llave pública del remitente, firma Ed25519 y datos del SOS. La firma cubre el encabezado (con el TTL en cero, porque los relevos lo decrementan), la llave del remitente y el contenido. **Un SOS de botones ocupa 179 bytes (límite 240).** El audio viaja en mensajes aparte y fragmentados; en el simulador el audio no se comprime con Codec2 (solo se muestra el tamaño teórico a ~1.200 bps).
+A 24-byte clear header (version, urgency, TTL, flags, 16-byte random ID, timestamp) + a body sealed with `crypto_box_seal` containing the sender's public key, an Ed25519 signature and the SOS data. The signature covers the header (with TTL zeroed, because relays decrement it), the sender key and the content. **A button-only SOS is 179 bytes (limit 240).** Audio travels in separate, fragmented messages; in the simulator audio is not Codec2-compressed (only the theoretical size at ~1,200 bps is shown).
 
 ## Stack
 
-Next.js (App Router) + TypeScript, Leaflet + OpenStreetMap (sin API key, tiles en escala de grises), `libsodium-wrappers`, Zod, Vitest. Datos detrás de una interfaz `Repository` (memoria por defecto; esquema Postgres/Supabase en [`supabase/schema.sql`](supabase/schema.sql)). Todos los tokens de diseño están en `src/styles/tokens.css` para aplicar un design system después sin reescribir componentes.
+Next.js (App Router) + TypeScript, Leaflet + OpenStreetMap (no API key, grayscale tiles), `libsodium-wrappers`, Zod, Vitest. Data sits behind a `Repository` interface (in-memory by default; Postgres/Supabase schema in [`supabase/schema.sql`](supabase/schema.sql)). All design tokens live in `src/styles/tokens.css` so a design system can be applied later without rewriting components.
 
-## Variables de entorno
+## Environment variables
 
-Ver [`.env.example`](.env.example). **Nunca** subas `.env.local`: el repositorio es público.
+See [`.env.example`](.env.example). **Never** commit `.env.local`: the repository is public.
 
-## Construido durante la hackathon
+## Built during the hackathon
 
-Todo el código de este repositorio se escribió entre el 27 de octubre y el 4 de noviembre de 2026 (el historial de commits es la prueba): paquete SOS y criptografía, ingesta segura, adaptadores de IA y motor de reglas, puntaje de confianza, panel, simuladores, escenario y benchmark, flujo de fotos y documentación.
+All code in this repository was written between October 27 and November 4, 2026 (the commit history is the proof): SOS packet and cryptography, secure ingestion, AI adapters and rules engine, confidence score, dashboard, simulators, scenario and benchmark, photo flow and documentation.
 
-## Concepto previo
+## Prior concept
 
-La idea de Solaris proviene de una propuesta presentada en un rally de innovación. De esa propuesta solo se toma el concepto; **no se reutiliza código**: la implementación es 100 % nueva.
+The idea behind Solaris comes from a proposal presented at an innovation rally. Only the concept is carried over; **no code is reused**: the implementation is 100% new.
 
-## Documentación
+## Documentation
 
-- [`docs/ASSUMPTIONS.md`](docs/ASSUMPTIONS.md): supuestos y puntos `VERIFICAR`.
-- [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md): amenazas y mitigaciones.
+- [`docs/ASSUMPTIONS.md`](docs/ASSUMPTIONS.md): assumptions and `VERIFY` items.
+- [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md): threats and mitigations.
 
-## Licencia
+## Language note
 
-Apache 2.0 (ver [`LICENSE`](LICENSE)).
+The code, documentation and UI are in English. The demo scenario's citizen messages are intentionally in **Spanish** (they model real SOS from Cali, Colombia), and the rules engine understands both Spanish and English keywords.
+
+## License
+
+Apache 2.0 (see [`LICENSE`](LICENSE)).

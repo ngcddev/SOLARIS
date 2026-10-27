@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const parsed = z.object({ dataUrl: z.string() }).safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Solicitud no válida" }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   const res = await addFieldPhoto(id, parsed.data.dataUrl);
   return NextResponse.json(res, { status: res.ok ? 200 : 400 });
 }

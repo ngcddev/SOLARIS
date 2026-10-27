@@ -2,23 +2,23 @@ import type { CaseStatus, Priority } from "./domain/types";
 import type { EmergencyType, WhoKind } from "./packet/types";
 
 export const TYPE_LABEL: Record<EmergencyType, string> = {
-  trapped: "Atrapado",
-  injured: "Herido",
-  bleeding: "Sangrado",
-  fire: "Incendio",
-  other: "Otro",
+  trapped: "Trapped",
+  injured: "Injured",
+  bleeding: "Bleeding",
+  fire: "Fire",
+  other: "Other",
 };
-export const WHO_LABEL: Record<WhoKind, string> = { baby: "Bebé", child: "Niño", adult: "Adulto", elder: "Adulto mayor" };
+export const WHO_LABEL: Record<WhoKind, string> = { baby: "Baby", child: "Child", adult: "Adult", elder: "Older adult" };
 export const STATUS_LABEL: Record<CaseStatus, string> = {
-  new: "Nuevo",
-  validated: "Validado",
-  false: "Falso",
-  assigned: "Equipo asignado",
-  dispatched: "Despachado",
-  closed: "Cerrado",
+  new: "New",
+  validated: "Validated",
+  false: "False",
+  assigned: "Team assigned",
+  dispatched: "Dispatched",
+  closed: "Closed",
 };
-export const PRIORITY_LABEL: Record<Priority, string> = { P1: "P1 · Crítica", P2: "P2 · Alta", P3: "P3 · Media", P4: "P4 · Baja" };
-export const SOURCE_LABEL = { meta: "Meta API", mock: "Simulado", rules: "Reglas" } as const;
+export const PRIORITY_LABEL: Record<Priority, string> = { P1: "P1 · Critical", P2: "P2 · High", P3: "P3 · Medium", P4: "P4 · Low" };
+export const SOURCE_LABEL = { meta: "Meta API", mock: "Simulated", rules: "Rules" } as const;
 
 export function fmtWait(ms: number): string {
   const m = Math.max(0, Math.floor(ms / 60000));

@@ -25,17 +25,17 @@ const CODEC2_BPS = 1200;
 const AUDIO_CHUNK = 60_000;
 
 const TYPES: { id: EmergencyType; label: string }[] = [
-  { id: "trapped", label: "Atrapado" },
-  { id: "injured", label: "Herido" },
-  { id: "bleeding", label: "Sangrado" },
-  { id: "fire", label: "Incendio" },
-  { id: "other", label: "Otro" },
+  { id: "trapped", label: "Trapped" },
+  { id: "injured", label: "Injured" },
+  { id: "bleeding", label: "Bleeding" },
+  { id: "fire", label: "Fire" },
+  { id: "other", label: "Other" },
 ];
 const WHO: { id: WhoKind; label: string }[] = [
-  { id: "baby", label: "Bebé" },
-  { id: "child", label: "Niño" },
-  { id: "adult", label: "Adulto" },
-  { id: "elder", label: "Adulto mayor" },
+  { id: "baby", label: "Baby" },
+  { id: "child", label: "Child" },
+  { id: "adult", label: "Adult" },
+  { id: "elder", label: "Older adult" },
 ];
 const PLACES = [
   { name: "Centro de Cali", lat: 3.4516, lon: -76.532 },
@@ -47,12 +47,12 @@ const PLACES = [
 const URGENCY: Record<EmergencyType, number> = { trapped: 1, fire: 1, bleeding: 2, injured: 2, other: 3 };
 
 const SPEECH: Record<number, string> = {
-  0: "Presiona el botón grande que dice qué está pasando.",
-  1: "Elige quiénes necesitan ayuda y cuántas personas son. Luego presiona continuar.",
-  2: "Si quieres, graba un audio corto y di dónde estás. Luego presiona enviar.",
+  0: "Press the big button that says what is happening.",
+  1: "Choose who needs help and how many people there are. Then press continue.",
+  2: "If you want, record a short audio and say where you are. Then press send.",
 };
 
-type Loc = { lat: number; lon: number; source: "gps" | "mapa" | "lista" };
+type Loc = { lat: number; lon: number; source: "gps" | "map" | "list" };
 type Sent = { sosBytes: number; audioBytes: number; audioSeconds: number; status: string };
 
 export default function CitizenApp() {
@@ -62,7 +62,7 @@ export default function CitizenApp() {
   const [type, setType] = useState<EmergencyType | null>(null);
   const [who, setWho] = useState<WhoKind[]>(["adult"]);
   const [count, setCount] = useState(1);
-  const [loc, setLoc] = useState<Loc>({ ...PLACES[0], source: "lista" });
+  const [loc, setLoc] = useState<Loc>({ ...PLACES[0], source: "list" });
   const [gpsMsg, setGpsMsg] = useState("");
   const [voiceGuide, setVoiceGuide] = useState(false);
   const [recording, setRecording] = useState(false);
@@ -94,7 +94,7 @@ export default function CitizenApp() {
       if (!("speechSynthesis" in window)) return;
       window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
-      u.lang = "es-CO";
+      u.lang = "en-US";
       window.speechSynthesis.speak(u);
     } catch {
       /* speech is optional */
@@ -108,13 +108,13 @@ export default function CitizenApp() {
   // GPS is attempted when reaching the last screen; the list/map remain as fallbacks.
   useEffect(() => {
     if (step !== 2 || !navigator.geolocation) return;
-    setGpsMsg("Buscando tu ubicación…");
+    setGpsMsg("Finding your location…");
     navigator.geolocation.getCurrentPosition(
       (p) => {
         setLoc({ lat: p.coords.latitude, lon: p.coords.longitude, source: "gps" });
-        setGpsMsg("Ubicación por GPS");
+        setGpsMsg("Location from GPS");
       },
-      () => setGpsMsg("No se pudo usar el GPS. Elige un lugar o toca el mapa."),
+      () => setGpsMsg("Could not use GPS. Pick a place or tap the map."),
       { timeout: 8000, maximumAge: 60_000 },
     );
   }, [step]);
@@ -137,7 +137,7 @@ export default function CitizenApp() {
       rec.current = await startRecording(MAX_AUDIO_S, setRemaining, () => void toggleRecordStopRef.current());
       setRecording(true);
     } catch {
-      setMicError("No pudimos usar el micrófono. Puedes enviar el SOS sin audio.");
+      setMicError("We could not use the microphone. You can send the SOS without audio.");
     }
   }
   const toggleRecordStopRef = useRef(async () => {});
@@ -173,9 +173,9 @@ export default function CitizenApp() {
       const first = data.results[0];
       if (first.status !== "accepted") throw new Error(first.reason ?? first.status);
       setSent({ sosBytes: sosPacket.length, audioBytes: audio?.wav.length ?? 0, audioSeconds: audio?.seconds ?? 0, status: first.status });
-      if (voiceGuide) speak("Tu pedido de ayuda fue enviado. Mantén la calma.");
+      if (voiceGuide) speak("Your help request was sent. Stay calm.");
     } catch {
-      setSendError("No se pudo enviar. Revisa tu conexión e inténtalo de nuevo.");
+      setSendError("Could not send. Check your connection and try again.");
     } finally {
       setSending(false);
     }
@@ -190,43 +190,43 @@ export default function CitizenApp() {
     setAudio(null);
   }
 
-  const markers = useMemo(() => [{ id: "me", lat: loc.lat, lon: loc.lon, color: "#000000", label: "Tu ubicación" }], [loc]);
+  const markers = useMemo(() => [{ id: "me", lat: loc.lat, lon: loc.lon, color: "#000000", label: "Your location" }], [loc]);
 
-  if (ready === "loading") return <main className={s.shell}><StateNotice kind="loading">Preparando tu teléfono seguro…</StateNotice></main>;
-  if (ready === "error") return <main className={s.shell}><StateNotice kind="error">No pudimos preparar el envío. Recarga la página.</StateNotice></main>;
+  if (ready === "loading") return <main className={s.shell}><StateNotice kind="loading">Preparing your secure phone…</StateNotice></main>;
+  if (ready === "error") return <main className={s.shell}><StateNotice kind="error">We could not prepare sending. Reload the page.</StateNotice></main>;
 
   return (
     <main className={s.shell}>
       <header className={s.header}>
-        <h1 className={s.title}>Pedir ayuda</h1>
-        <Button size="sm" selected={voiceGuide} onClick={() => setVoiceGuide((v) => !v)} aria-label="Guía por voz">
-          <Icon name="speaker" size={18} /> Voz {voiceGuide ? "sí" : "no"}
+        <h1 className={s.title}>Ask for help</h1>
+        <Button size="sm" selected={voiceGuide} onClick={() => setVoiceGuide((v) => !v)} aria-label="Voice guide">
+          <Icon name="speaker" size={18} /> Voice guide {voiceGuide ? "on" : "off"}
         </Button>
       </header>
-      <p className={s.meta}>Simulador: este “teléfono” genera paquetes reales firmados y cifrados.</p>
+      <p className={s.meta}>Simulator: this “phone” generates real signed and encrypted packets.</p>
 
       {sent ? (
         <section aria-labelledby="done" className={s.shell} style={{ padding: 0, minHeight: 0 }}>
           <StateNotice kind="success">
-            <strong id="done">Pedido de ayuda enviado.</strong>
+            <strong id="done">Help request sent.</strong>
             <br />
-            Un rescatista lo revisará. Mantente en un lugar seguro y visible si puedes.
+            A rescuer will review it. Stay somewhere safe and visible if you can.
           </StateNotice>
           <p className={s.meta}>
-            Paquete SOS: {sent.sosBytes} bytes (límite {MAX_SOS_PACKET_BYTES}).
-            {sent.audioBytes > 0 && <> Audio: {sent.audioSeconds} s. Con Codec2 (~{CODEC2_BPS} bps) pesaría ~{Math.ceil((sent.audioSeconds * CODEC2_BPS) / 8)} bytes (teórico; en el simulador viaja sin comprimir).</>}
+            SOS packet: {sent.sosBytes} bytes (limit {MAX_SOS_PACKET_BYTES}).
+            {sent.audioBytes > 0 && <> Audio: {sent.audioSeconds} s. With Codec2 (~{CODEC2_BPS} bps) it would weigh ~{Math.ceil((sent.audioSeconds * CODEC2_BPS) / 8)} bytes (theoretical; in the simulator it travels uncompressed).</>}
           </p>
-          <Button variant="primary" onClick={reset}>Enviar otro pedido</Button>
+          <Button variant="primary" onClick={reset}>Send another request</Button>
         </section>
       ) : (
         <>
-          <ol className={s.steps} aria-label={`Paso ${step + 1} de 3`}>
+          <ol className={s.steps} aria-label={`Step ${step + 1} of 3`}>
             {[0, 1, 2].map((i) => <li key={i} data-done={i <= step} />)}
           </ol>
 
           {step === 0 && (
             <section aria-labelledby="q1">
-              <h2 id="q1" className={s.label}>¿Qué pasa?</h2>
+              <h2 id="q1" className={s.label}>What is happening?</h2>
               <div className={s.grid}>
                 {TYPES.map((t, i) => (
                   <Button key={t.id} size="xl" variant={t.id === "fire" || t.id === "trapped" ? "default" : "default"} className={i === TYPES.length - 1 ? s.wide : undefined} selected={type === t.id}
@@ -240,7 +240,7 @@ export default function CitizenApp() {
 
           {step === 1 && (
             <section aria-labelledby="q2">
-              <h2 id="q2" className={s.label}>¿Quiénes necesitan ayuda?</h2>
+              <h2 id="q2" className={s.label}>Who needs help?</h2>
               <div className={s.grid}>
                 {WHO.map((w) => (
                   <Button key={w.id} size="xl" selected={who.includes(w.id)} onClick={() => toggleWho(w.id)}>
@@ -248,49 +248,49 @@ export default function CitizenApp() {
                   </Button>
                 ))}
               </div>
-              <h3 className={s.label} style={{ marginTop: "var(--space-4)" }}>¿Cuántas personas?</h3>
-              <div className={s.counter} role="group" aria-label="Número de personas">
-                <Button className={s.bigRound} aria-label="Menos personas" disabled={count <= 1} onClick={() => setCount((c) => Math.max(1, c - 1))}>−</Button>
+              <h3 className={s.label} style={{ marginTop: "var(--space-4)" }}>How many people?</h3>
+              <div className={s.counter} role="group" aria-label="Number of people">
+                <Button className={s.bigRound} aria-label="Fewer people" disabled={count <= 1} onClick={() => setCount((c) => Math.max(1, c - 1))}>−</Button>
                 <output className={s.counterValue} aria-live="polite">{count}</output>
-                <Button className={s.bigRound} aria-label="Más personas" onClick={() => setCount((c) => Math.min(99, c + 1))}>+</Button>
+                <Button className={s.bigRound} aria-label="More people" onClick={() => setCount((c) => Math.min(99, c + 1))}>+</Button>
               </div>
               <div className={s.actions} style={{ marginTop: "var(--space-4)" }}>
-                <Button onClick={() => setStep(0)}>Atrás</Button>
-                <Button variant="primary" onClick={() => setStep(2)}>Continuar</Button>
+                <Button onClick={() => setStep(0)}>Back</Button>
+                <Button variant="primary" onClick={() => setStep(2)}>Continue</Button>
               </div>
             </section>
           )}
 
           {step === 2 && (
             <section aria-labelledby="q3" style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-              <h2 id="q3" className={s.label}>Audio (opcional) y ubicación</h2>
+              <h2 id="q3" className={s.label}>Audio (optional) and location</h2>
               <Button size="xl" variant={recording ? "critical" : "default"} onClick={toggleRecord} className={recording ? s.recording : undefined}>
-                <Icon name="mic" /> {recording ? `Detener (${remaining} s)` : audio ? `Audio de ${audio.seconds} s · grabar de nuevo` : `Grabar audio (máx. ${MAX_AUDIO_S} s)`}
+                <Icon name="mic" /> {recording ? `Stop (${remaining} s)` : audio ? `${audio.seconds} s audio · record again` : `Record audio (max. ${MAX_AUDIO_S} s)`}
               </Button>
               {micError && <StateNotice kind="error">{micError}</StateNotice>}
 
               <div className={s.row}>
                 <Icon name="pin" size={20} />
-                <span>{loc.source === "gps" ? "Ubicación por GPS" : loc.source === "mapa" ? "Punto elegido en el mapa" : "Lugar elegido de la lista"}</span>
+                <span>{loc.source === "gps" ? "Location from GPS" : loc.source === "map" ? "Point chosen on the map" : "Place chosen from the list"}</span>
                 <Badge tone="muted">{loc.lat.toFixed(4)}, {loc.lon.toFixed(4)}</Badge>
               </div>
               {gpsMsg && <p className={s.meta} role="status">{gpsMsg}</p>}
               <label>
-                <span className="sr-only">Elegir lugar</span>
-                <select className={s.select} value="" onChange={(e) => { const p = PLACES[Number(e.target.value)]; if (p) setLoc({ ...p, source: "lista" }); }}>
-                  <option value="" disabled>Elegir un lugar de la lista…</option>
+                <span className="sr-only">Choose a place</span>
+                <select className={s.select} value="" onChange={(e) => { const p = PLACES[Number(e.target.value)]; if (p) setLoc({ ...p, source: "list" }); }}>
+                  <option value="" disabled>Choose a place from the list…</option>
                   {PLACES.map((p, i) => <option key={p.name} value={i}>{p.name}</option>)}
                 </select>
               </label>
               <div className={s.mapBox}>
-                <DynamicMap center={[loc.lat, loc.lon]} zoom={15} markers={markers} onMapClick={(lat, lon) => setLoc({ lat, lon, source: "mapa" })} ariaLabel="Mapa para elegir tu ubicación; toca para mover el punto" />
+                <DynamicMap center={[loc.lat, loc.lon]} zoom={15} markers={markers} onMapClick={(lat, lon) => setLoc({ lat, lon, source: "map" })} ariaLabel="Map to choose your location; tap to move the point" />
               </div>
 
               {sendError && <StateNotice kind="error">{sendError}</StateNotice>}
               <div className={s.actions}>
-                <Button onClick={() => setStep(1)}>Atrás</Button>
+                <Button onClick={() => setStep(1)}>Back</Button>
                 <Button variant="critical" size="sm" disabled={sending || recording} onClick={send} style={{ minHeight: "var(--tap-target-xl)", fontSize: "var(--font-size-lg)" }}>
-                  <Icon name="send" size={28} /> {sending ? "Enviando…" : "Enviar"}
+                  <Icon name="send" size={28} /> {sending ? "Sending…" : "Send"}
                 </Button>
               </div>
             </section>
@@ -300,7 +300,7 @@ export default function CitizenApp() {
 
       <p className={s.transparency}>
         <Icon name="lock" size={20} />
-        <span>Tu teléfono no puede leer los SOS que retransmite: viajan cifrados.</span>
+        <span>Your phone cannot read the SOS messages it relays: they travel encrypted.</span>
       </p>
     </main>
   );

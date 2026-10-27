@@ -46,13 +46,13 @@ export function greedyAssignment(input: AnalystInput): AnalystOutput {
     assignments.push({
       caseId: c.id,
       teamId: best.t.id,
-      rationale: `${c.priority}: equipo disponible más cercano (${(best.d / 1000).toFixed(1)} km, ${best.t.size} integrantes). Sujeto a confirmación del brigadista.`,
+      rationale: `${c.priority}: nearest available team (${(best.d / 1000).toFixed(1)} km, ${best.t.size} members). Subject to rescuer confirmation.`,
     });
   }
   const unattended = ordered.length - assignments.length;
   return {
     assignments,
-    notes: unattended > 0 ? `${unattended} caso(s) sin equipo disponible por ahora.` : "Todos los casos activos tienen una propuesta.",
+    notes: unattended > 0 ? `${unattended} case(s) have no team available for now.` : "Every active case has a proposal.",
   };
 }
 

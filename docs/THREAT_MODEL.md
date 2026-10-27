@@ -1,29 +1,29 @@
-# Modelo de amenazas
+# Threat model
 
-Alcance: el MVP de Solaris (simuladores, ingesta, IA, panel). Lo que depende de la hoja de ruta (malla BLE/LoRa real, app nativa) se indica como tal.
+Scope: the Solaris MVP (simulators, ingestion, AI, dashboard). Anything that depends on the roadmap (real BLE/LoRa mesh, native app) is flagged as such.
 
-## Activos
-- Ubicación y datos de personas que piden ayuda.
-- Integridad de la cola de prioridades (que un atacante no desplace casos reales).
-- Disponibilidad del centro de mando durante el desastre.
-- Llave privada del centro de mando.
+## Assets
+- Location and personal data of people asking for help.
+- Integrity of the priority queue (an attacker must not displace real cases).
+- Availability of the command center during the disaster.
+- The command center's private key.
 
-## Amenazas y mitigaciones
+## Threats and mitigations
 
-| # | Amenaza | Mitigación en el MVP | Pendiente / hoja de ruta |
+| # | Threat | Mitigation in the MVP | Pending / roadmap |
 |---|---|---|---|
-| 1 | **SOS falsos** (bromas, ubicaciones inventadas, intentos de saturar al centro) | Puntaje de confianza con desglose: coincidencia con evento sísmico (tiempo y espacio), corroboración por otros remitentes, proximidad del primer nodo que retransmitió (el alcance Bluetooth corrobora la ubicación), coherencia del contenido, firma/identidad. **Un SOS de baja confianza nunca se descarta**: baja un nivel y queda marcado para revisión humana (evita que un atacante logre "silenciar" casos reales). El brigadista puede marcar como falso. | Verificación por SMS/teléfono como señal adicional. Detección de patrones entre identidades. |
-| 2 | **Suplantación** de un remitente | Cada paquete lleva firma Ed25519 sobre encabezado + llave del remitente + contenido; se verifica antes de aceptar. Una firma que no corresponde a la llave declarada se rechaza (`bad_signature`). | Vincular identidad a un número verificado; rotación de llaves. |
-| 3 | **Alteración** en tránsito (un relevo malicioso) | El cuerpo va cifrado y autenticado (`crypto_box_seal`) y firmado; cambiar encabezado o cuerpo rompe la firma o el descifrado. Solo el TTL es mutable, y por eso queda fuera de la firma (un relevo puede acortar la vida del mensaje, no cambiar su contenido). | Un relevo puede descartar paquetes; la redundancia por varios caminos y pasarelas lo mitiga. |
-| 4 | **Repetición (replay)** | El ID de 16 bytes aleatorios se registra solo después de verificar la firma (no se puede "envenenar" el registro con paquetes falsos). Mismo ID por **otro camino** dentro de la ventana de deduplicación = duplicado legítimo (se fusiona y se cuenta el camino); mismo camino o fuera de la ventana = repetición bloqueada. Además se rechazan timestamps fuera de la ventana configurable (`REPLAY_WINDOW_S`), pasados o futuros. | Ventana y registro persistentes en base de datos (hoy en memoria). |
-| 5 | **Inundación de la red / del centro** | Límite por identidad (`RATE_LIMIT_MAX` por `RATE_LIMIT_WINDOW_MIN`); los duplicados no consumen el cupo; tamaño máximo de paquete y de lote en `/api/ingest`; fragmentos de audio acotados (máx. 16) y solo aceptados del mismo remitente que inició el audio; lista de revocación de identidades. Deduplicación por nodo y TTL en la malla evitan tormentas de reenvío. | Límite por pasarela/IP, cuotas globales, protección de DoS en el borde. Un atacante con muchas identidades sigue siendo un riesgo: la corroboración y la revisión humana lo acotan. |
-| 6 | **Privacidad de la ubicación** | El contenido (incluida la ubicación) viaja cifrado hacia la llave pública del centro: los teléfonos y nodos que retransmiten no pueden leerlo. Solo el encabezado (urgencia, TTL, ID aleatorio, hora) es visible. No se registra contenido descifrado ni llaves en logs. La retransmisión exige permiso explícito y una notificación visible. Las fotos solo las suben brigadistas/drones, no los ciudadanos. | Cifrado de datos en reposo en Postgres; retención mínima; metadatos del encabezado (hora, urgencia) siguen siendo observables. Si el centro es comprometido, toda la información lo está. |
-| 7 | **Robo de la llave del centro** | La llave privada solo vive en `.env.local` (git-ignorado) o en memoria efímera; `.env.example` no contiene valores; `generate-keys` se niega a sobrescribir. | Gestor de secretos y rotación; llaves por jornada. |
-| 8 | **IA que alucina o da consejo médico** | Salidas validadas con Zod; ids inventados o equipos ocupados se descartan en las recomendaciones; un filtro bloquea lenguaje médico y lo reemplaza por una plantilla segura; si algo falla, se usa el nivel 3 (reglas). La decisión final siempre es humana. | Evaluación periódica del filtro con más casos. |
-| 9 | **Caída de internet** | Nivel 3 por reglas, sin IA ni red; el interruptor del panel lo demuestra. | Modelo local (N2). |
-| 10 | **Entradas maliciosas** (JSON, imágenes) | Zod en todas las rutas; las imágenes se limitan a PNG/JPEG/WebP en data URL y por tamaño; no se ejecuta contenido subido. | Antivirus/re-encode de imágenes en servidor. |
+| 1 | **False SOS** (jokes, invented locations, attempts to saturate the center) | Confidence score with a visible breakdown: match with a seismic event (time and space), corroboration by other senders, proximity of the first relaying node (Bluetooth range corroborates the reported location), content coherence, signature/identity. **A low-confidence SOS is never discarded**: it drops one level and is flagged for human review (so an attacker cannot "silence" real cases). The rescuer can mark a case as false. | SMS/phone verification as an extra signal. Pattern detection across identities. |
+| 2 | **Sender impersonation** | Every packet carries an Ed25519 signature over header + sender key + content, verified before accepting. A signature that does not match the declared key is rejected (`bad_signature`). | Bind identity to a verified phone number; key rotation. |
+| 3 | **Tampering** in transit (malicious relay) | The body is encrypted and authenticated (`crypto_box_seal`) and signed; changing the header or body breaks the signature or the decryption. Only the TTL is mutable, which is why it is outside the signature (a relay can shorten a message's life, not change its content). | A relay can drop packets; redundancy over several paths and gateways mitigates this. |
+| 4 | **Replay** | The 16-byte random ID is recorded only after the signature is verified (the registry cannot be "poisoned" with forged packets). The same ID through **another path** inside the deduplication window is a legitimate duplicate (merged, and the path is counted); the same path or outside the window is a blocked replay. Timestamps outside the configurable window (`REPLAY_WINDOW_S`), past or future, are rejected. | Persistent window and registry in the database (in memory today). |
+| 5 | **Network / center flooding** | Per-identity limit (`RATE_LIMIT_MAX` per `RATE_LIMIT_WINDOW_MIN`); duplicates do not consume the quota; maximum packet and batch size in `/api/ingest`; bounded audio fragments (max 16), accepted only from the sender that started the audio; identity revocation list. Per-node deduplication and TTL on the mesh prevent forwarding storms. | Per-gateway/IP limits, global quotas, edge DoS protection. An attacker with many identities remains a risk: corroboration and human review bound it. |
+| 6 | **Location privacy** | Content (including location) travels encrypted towards the center's public key: relay phones and nodes cannot read it. Only the header (urgency, TTL, random ID, time) is visible. Decrypted content and keys are never logged. Relaying requires explicit permission and a visible notification. Photos are only uploaded by rescuers/drones, never by citizens. | Encryption at rest in Postgres; minimal retention; header metadata (time, urgency) is still observable. If the center is compromised, all its information is. |
+| 7 | **Theft of the center key** | The private key lives only in `.env.local` (git-ignored) or in ephemeral memory; `.env.example` has no values; `generate-keys` refuses to overwrite. | Secret manager and rotation; per-shift keys. |
+| 8 | **AI hallucination or medical advice** | Outputs validated with Zod; invented ids or busy teams are dropped from recommendations; a filter blocks medical language and replaces it with a safe template; if anything fails, level 3 (rules) is used. The final decision is always human. | Periodic evaluation of the filter with more cases. |
+| 9 | **Internet outage** | Level 3 by rules, no AI or network; the dashboard switch demonstrates it. | Local model (L2). |
+| 10 | **Malicious input** (JSON, images) | Zod on every route; images are limited to PNG/JPEG/WebP data URLs and by size; uploaded content is never executed. | Antivirus / server-side image re-encoding. |
 
-## Supuestos de confianza
-- La pasarela y el centro de mando son de confianza; los teléfonos y relevos no.
-- El reloj de los teléfonos puede desviarse: por eso la ventana de timestamps es amplia (10 min por defecto).
-- El MVP guarda estado en memoria; reiniciar el servidor borra casos, el registro de repeticiones y los contadores.
+## Trust assumptions
+- The gateway and the command center are trusted; phones and relays are not.
+- Phone clocks can drift: hence the wide timestamp window (10 min by default).
+- The MVP keeps state in memory; restarting the server wipes cases, the replay registry and counters.

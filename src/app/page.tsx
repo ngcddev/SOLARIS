@@ -5,14 +5,14 @@ export default function Home() {
     <main style={{ padding: "var(--space-6)", maxWidth: "40rem", margin: "0 auto" }}>
       <h1>Solaris</h1>
       <p>
-        Coordinación y priorización de pedidos de ayuda para las primeras 72 horas después de un
-        desastre. Herramienta para rescatistas: la decisión final siempre es humana.
+        Coordination and prioritization of help requests for the first 72 hours after a disaster.
+        A tool for rescuers: the final decision is always human.
       </p>
-      <nav aria-label="Secciones">
+      <nav aria-label="Sections">
         <ul>
-          <li><Link href="/centro">Centro de mando</Link></li>
-          <li><Link href="/ciudadano">Simulador ciudadano</Link></li>
-          <li><Link href="/malla">Simulador de malla</Link></li>
+          <li><Link href="/command-center">Command center</Link></li>
+          <li><Link href="/citizen">Citizen simulator</Link></li>
+          <li><Link href="/mesh">Mesh simulator</Link></li>
         </ul>
       </nav>
     </main>

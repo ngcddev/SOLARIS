@@ -82,7 +82,7 @@ export async function ingest(input: IngestInput, ctx: IngestContext): Promise<In
       const existing = await repo.getCase(id);
       if (existing) {
         existing.paths.push(path);
-        existing.events.push({ at: now, kind: "duplicate_path", note: `Llegó también por otro camino (${path.length} saltos)` });
+        existing.events.push({ at: now, kind: "duplicate_path", note: `Also arrived via another path (${path.length} hops)` });
         await repo.saveCase(existing);
       }
       await repo.bumpMetric("duplicates");
@@ -133,7 +133,7 @@ export async function ingest(input: IngestInput, ctx: IngestContext): Promise<In
     priority: "P3",
     needsReview: false,
     photos: [],
-    events: [{ at: now, kind: "received", note: "SOS recibido, firma verificada" }],
+    events: [{ at: now, kind: "received", note: "SOS received, signature verified" }],
   };
   await repo.saveCase(c);
   await repo.bumpMetric("accepted");

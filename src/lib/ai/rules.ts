@@ -7,16 +7,16 @@ import { containsMedicalAdvice, SAFE_FALLBACK_JUSTIFICATION } from "./safety";
 const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 
 const KEYWORDS: { re: RegExp; score: number; tag: "trapped" | "baby" | "child" | "elder" | "fire" | "blood" | "collapse" }[] = [
-  { re: /atrapad|escombro|aplastad|derrumb|no puede salir|no podemos salir|bajo (la|el)/, score: 3, tag: "trapped" },
-  { re: /sangr|herid|mucha sangre/, score: 2, tag: "blood" },
-  { re: /incendi|fuego|humo|quem/, score: 3, tag: "fire" },
-  { re: /bebe|recien nacid/, score: 2, tag: "baby" },
-  { re: /\bnino|\bnina|menor|hijo|hija/, score: 1, tag: "child" },
-  { re: /abuel|anciano|adulto mayor|tercera edad/, score: 1, tag: "elder" },
-  { re: /colaps|se cayo|casa caida|edificio caido/, score: 1, tag: "collapse" },
+  { re: /atrapad|escombro|aplastad|derrumb|no puede salir|no podemos salir|bajo (la|el)|trapped|rubble|crushed|cannot get out|can't get out|stuck/, score: 3, tag: "trapped" },
+  { re: /sangr|herid|mucha sangre|bleeding|blood|wounded|injur/, score: 2, tag: "blood" },
+  { re: /incendi|fuego|humo|quem|\bfire\b|smoke|burning/, score: 3, tag: "fire" },
+  { re: /bebe|recien nacid|\bbaby|\bbabies|newborn|infant/, score: 2, tag: "baby" },
+  { re: /\bnino|\bnina|menor|hijo|hija|\bchild|\bkid|daughter/, score: 1, tag: "child" },
+  { re: /abuel|anciano|adulto mayor|tercera edad|elderly|grandmother|grandfather|older adult/, score: 1, tag: "elder" },
+  { re: /colaps|se cayo|casa caida|edificio caido|collapse|fell down/, score: 1, tag: "collapse" },
 ];
-const JOKE = /jaja|jeje|broma|es mentira|probando|test\b|hola hola|pizza|futbol/;
-const CALM = /sin novedad|no pasa nada|todo bien|estoy bien/;
+const JOKE = /jaja|jeje|broma|es mentira|probando|test\b|hola hola|pizza|futbol|haha|joke|just kidding|testing/;
+const CALM = /sin novedad|no pasa nada|todo bien|estoy bien|all good|nothing happened|i am fine|i'm fine/;
 
 export function triageByRules(input: TriageInput): TriageOutput {
   const text = norm(input.transcript ?? "");
@@ -54,12 +54,12 @@ export function triageByRules(input: TriageInput): TriageOutput {
     hasElderly,
     trapped,
     priority,
-    justification: rescuerJustification({ ...input, trapped, hasBabies, hasChildren, hasElderly }, priority, "Reglas"),
+    justification: rescuerJustification({ ...input, trapped, hasBabies, hasChildren, hasElderly }, priority, "Rules"),
     coherence,
   };
 }
 
-const TYPE_LABEL = { trapped: "personas atrapadas", injured: "personas heridas reportadas", bleeding: "reporte de sangrado", fire: "incendio reportado", other: "emergencia sin clasificar" } as const;
+const TYPE_LABEL = { trapped: "people trapped", injured: "injured people reported", bleeding: "bleeding reported", fire: "fire reported", other: "unclassified emergency" } as const;
 
 /** Logistics-oriented explanation for the rescuer. Never advice for the victim. */
 export function rescuerJustification(
@@ -67,12 +67,12 @@ export function rescuerJustification(
   priority: Priority,
   origin: string,
 ): string {
-  const parts = [`${origin}: ${TYPE_LABEL[i.type]}, ${i.count} persona${i.count === 1 ? "" : "s"}`];
-  const vulnerable = [i.hasBabies && "bebés", i.hasChildren && "niños", i.hasElderly && "adultos mayores"].filter(Boolean);
-  if (vulnerable.length) parts.push(`incluye ${vulnerable.join(", ")}`);
-  if (i.trapped && i.type !== "trapped") parts.push("posible atrapamiento");
-  if (i.waitMinutes >= 30) parts.push(`${Math.round(i.waitMinutes)} min de espera`);
-  parts.push(`prioridad sugerida ${priority}; requiere validación del rescatista`);
+  const parts = [`${origin}: ${TYPE_LABEL[i.type]}, ${i.count} ${i.count === 1 ? "person" : "people"}`];
+  const vulnerable = [i.hasBabies && "babies", i.hasChildren && "children", i.hasElderly && "older adults"].filter(Boolean);
+  if (vulnerable.length) parts.push(`includes ${vulnerable.join(", ")}`);
+  if (i.trapped && i.type !== "trapped") parts.push("possible entrapment");
+  if (i.waitMinutes >= 30) parts.push(`${Math.round(i.waitMinutes)} min waiting`);
+  parts.push(`suggested priority ${priority}; requires rescuer validation`);
   const text = parts.join("; ") + ".";
   return containsMedicalAdvice(text) ? SAFE_FALLBACK_JUSTIFICATION : text;
 }

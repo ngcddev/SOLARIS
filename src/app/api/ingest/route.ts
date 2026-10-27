@@ -15,7 +15,7 @@ const body = z.object({
 /** Gateway endpoint: receives opaque (sealed) packets, never plaintext. */
 export async function POST(req: Request) {
   const parsed = body.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Solicitud no válida" }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   const results = [];
   for (const p of parsed.data.packets) results.push(await processPacket(p.packet, p.path ?? []));
   return NextResponse.json({ results });

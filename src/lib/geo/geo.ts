@@ -29,14 +29,14 @@ export function eventsFromUsgs(feed: UsgsFeed, simulated: boolean): EarthquakeEv
       lat: f.geometry.coordinates[1],
       lon: f.geometry.coordinates[0],
       magnitude: f.properties.mag as number,
-      place: f.properties.place ?? "Sin nombre",
+      place: f.properties.place ?? "Unnamed",
       simulated,
     }));
 }
 
 /** Optional real USGS feed, behind USGS_FEED_ENABLED. Falls back to nothing on any error. */
 export async function fetchUsgsEvents(): Promise<EarthquakeEvent[]> {
-  // VERIFICAR: public USGS endpoint; summary feed of significant quakes in the last day.
+  // VERIFY: public USGS endpoint; summary feed of significant quakes in the last day.
   const url = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/significant_day.geojson";
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(8000) });

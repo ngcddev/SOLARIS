@@ -90,8 +90,8 @@ describe("mode selection and graceful degradation", () => {
 });
 
 const teams: Team[] = [
-  { id: "t1", name: "Equipo Norte", size: 6, lat: 3.46, lon: -76.53, status: "available" },
-  { id: "t2", name: "Equipo Sur", size: 4, lat: 3.4, lon: -76.53, status: "available" },
+  { id: "t1", name: "Team North", size: 6, lat: 3.46, lon: -76.53, status: "available" },
+  { id: "t2", name: "Team South", size: 4, lat: 3.4, lon: -76.53, status: "available" },
   { id: "t3", name: "Ocupado", size: 5, lat: 3.45, lon: -76.53, status: "dispatched" },
 ];
 
@@ -149,7 +149,7 @@ describe("trust score", () => {
     expect(t.lowConfidence).toBe(true);
   });
   it("a field photo with people adds to the score", () => {
-    const photo = { id: "p", uploadedAt: 0, dataUrl: "", source: "mock" as const, findings: [{ phrase: "persona", count: 1, masks: [] }] };
+    const photo = { id: "p", uploadedAt: 0, dataUrl: "", source: "mock" as const, findings: [{ phrase: "person", count: 1, masks: [] }] };
     const a = computeTrust(mkCase({ triage: { coherence: 0.5 } as never }), { now: 0, events: [], others: [] });
     const b = computeTrust(mkCase({ triage: { coherence: 0.5 } as never, photos: [photo] }), { now: 0, events: [], others: [] });
     expect(b.score).toBe(Math.min(100, a.score + 10));

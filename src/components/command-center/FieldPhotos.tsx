@@ -5,15 +5,15 @@ import type { Case, FieldPhoto } from "@/lib/domain/types";
 import { SOURCE_LABEL } from "@/lib/labels";
 import { postJson } from "@/lib/client/useCommandState";
 import { Button, StateNotice } from "../ui";
-import s from "./centro.module.css";
+import s from "./command-center.module.css";
 
 const MAX_SIDE = 1024;
 
 /** Dash styles instead of colors: the palette stays black & white. */
 const STYLE: Record<string, { dash: number[]; width: number }> = {
-  persona: { dash: [], width: 4 },
-  "estructura colapsada": { dash: [14, 8], width: 3 },
-  "vía bloqueada": { dash: [3, 6], width: 3 },
+  person: { dash: [], width: 4 },
+  "collapsed structure": { dash: [14, 8], width: 3 },
+  "blocked road": { dash: [3, 6], width: 3 },
 };
 
 function MaskedImage({ photo }: { photo: FieldPhoto }) {
@@ -48,8 +48,8 @@ function MaskedImage({ photo }: { photo: FieldPhoto }) {
     };
     img.src = photo.dataUrl;
   }, [photo]);
-  const summary = photo.findings.map((f) => `${f.phrase}: ${f.count}`).join(", ") || "sin hallazgos";
-  return <canvas ref={ref} role="img" aria-label={`Foto de campo con máscaras de segmentación. Hallazgos: ${summary}`} style={{ width: "100%", height: "auto", border: "var(--border-width) solid var(--color-border)", borderRadius: "var(--radius-md)" }} />;
+  const summary = photo.findings.map((f) => `${f.phrase}: ${f.count}`).join(", ") || "no findings";
+  return <canvas ref={ref} role="img" aria-label={`Field photo with segmentation masks. Findings: ${summary}`} style={{ width: "100%", height: "auto", border: "var(--border-width) solid var(--color-border)", borderRadius: "var(--radius-md)" }} />;
 }
 
 async function fileToDataUrl(file: File): Promise<string> {
@@ -77,7 +77,7 @@ function sampleImage(seed: string): string {
   for (let i = 0; i < 9; i++) ctx.fillRect(40 + i * 82, 300 - ((i * 37 + seed.length * 13) % 120), 60, 260);
   ctx.fillStyle = "#fff";
   ctx.font = "bold 22px sans-serif";
-  ctx.fillText("IMAGEN DE EJEMPLO (no es una foto real)", 150, 40);
+  ctx.fillText("SAMPLE IMAGE (not a real photo)", 150, 40);
   return c.toDataURL("image/jpeg", 0.8);
 }
 
@@ -96,7 +96,7 @@ export default function FieldPhotos({ c, onChanged }: { c: Case; onChanged: () =
     fetch(`/api/cases/${c.id}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((d: Case) => alive && setFull(d.photos))
-      .catch(() => alive && setMsg({ kind: "error", text: "No se pudieron cargar las fotos." }));
+      .catch(() => alive && setMsg({ kind: "error", text: "The photos could not be loaded." }));
     return () => {
       alive = false;
     };
@@ -106,7 +106,7 @@ export default function FieldPhotos({ c, onChanged }: { c: Case; onChanged: () =
     setBusy(true);
     setMsg(undefined);
     const res = await postJson<{ error?: string }>(`/api/cases/${c.id}/photo`, { dataUrl });
-    setMsg(res.ok ? { kind: "success", text: "Foto analizada y asociada al caso." } : { kind: "error", text: res.data.error ?? "No se pudo subir la foto." });
+    setMsg(res.ok ? { kind: "success", text: "Photo analyzed and attached to the case." } : { kind: "error", text: res.data.error ?? "The photo could not be uploaded." });
     onChanged();
     setBusy(false);
   }
@@ -118,29 +118,29 @@ export default function FieldPhotos({ c, onChanged }: { c: Case; onChanged: () =
     try {
       await upload(await fileToDataUrl(f));
     } catch {
-      setMsg({ kind: "error", text: "No se pudo leer la imagen." });
+      setMsg({ kind: "error", text: "The image could not be read." });
     }
   }
 
   return (
     <div>
-      <h3 className={s.h3}>Fotos de campo ({count})</h3>
-      <p className={s.rowMeta}>Las fotos las suben brigadistas o drones con conexión. No vienen del SOS ciudadano: una foto no cabe en la malla.</p>
+      <h3 className={s.h3}>Field photos ({count})</h3>
+      <p className={s.rowMeta}>Photos are uploaded by rescuers or drones with connectivity. They do not come from the citizen SOS: a photo does not fit on the mesh.</p>
       <div className={s.actions} style={{ margin: "var(--space-2) 0" }}>
         <label>
-          <span className="sr-only">Subir foto de campo</span>
+          <span className="sr-only">Upload field photo</span>
           <input type="file" accept="image/png,image/jpeg,image/webp" onChange={onFile} disabled={busy} />
         </label>
-        <Button size="sm" disabled={busy} onClick={() => upload(sampleImage(c.id))}>Usar imagen de ejemplo</Button>
+        <Button size="sm" disabled={busy} onClick={() => upload(sampleImage(c.id))}>Use sample image</Button>
       </div>
-      {busy && <StateNotice kind="loading">Analizando imagen…</StateNotice>}
+      {busy && <StateNotice kind="loading">Analyzing image…</StateNotice>}
       {msg && <StateNotice kind={msg.kind}>{msg.text}</StateNotice>}
       {full.map((p) => (
         <figure key={p.id} style={{ margin: "var(--space-2) 0" }}>
           <MaskedImage photo={p} />
           <figcaption className={s.rowMeta}>
-            Segmentación ({SOURCE_LABEL[p.source]}): {p.findings.length ? p.findings.map((f) => `${f.phrase} ×${f.count}`).join(" · ") : "sin análisis (modo sin internet)"}.
-            {" "}Trazo continuo grueso = persona; rayado = estructura colapsada; punteado = vía bloqueada.
+            Segmentation ({SOURCE_LABEL[p.source]}): {p.findings.length ? p.findings.map((f) => `${f.phrase} ×${f.count}`).join(" · ") : "no analysis (offline mode)"}.
+            {" "}Thick solid outline = person; dashed = collapsed structure; dotted = blocked road.
           </figcaption>
         </figure>
       ))}

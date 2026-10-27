@@ -36,21 +36,21 @@ export const mockTriage: TriageProvider = {
     const word = Object.keys(NUMBER_WORDS).find((w) => new RegExp(`\\b(somos|son|hay)\\s+${w}\\b`).test(text));
     const spoken = digit ? Number(digit) : word ? NUMBER_WORDS[word] : 0;
     const base = triageByRules({ ...input, count: Math.max(input.count, spoken) });
-    return { ...base, justification: rescuerJustification({ ...input, count: base.people, trapped: base.trapped, hasBabies: base.hasBabies, hasChildren: base.hasChildren, hasElderly: base.hasElderly }, base.priority, "Análisis simulado") };
+    return { ...base, justification: rescuerJustification({ ...input, count: base.people, trapped: base.trapped, hasBabies: base.hasBabies, hasChildren: base.hasChildren, hasElderly: base.hasElderly }, base.priority, "Simulated analysis") };
   },
 };
 
 export const mockAnalyst: AnalystProvider = {
   async recommend(input) {
     const out = greedyAssignment(input);
-    return { ...out, notes: `[Simulado] ${out.notes}` };
+    return { ...out, notes: `[Simulated] ${out.notes}` };
   },
 };
 
 const PHRASE_COUNTS: Record<string, [number, number]> = {
-  persona: [1, 4],
-  "estructura colapsada": [0, 2],
-  "vía bloqueada": [0, 2],
+  person: [1, 4],
+  "collapsed structure": [0, 2],
+  "blocked road": [0, 2],
 };
 
 export const mockVision: VisionProvider = {
