@@ -27,6 +27,7 @@ export default function Dashboard() {
   const [notice, setNotice] = useState<{ kind: "success" | "error"; text: string }>();
   const [rec, setRec] = useState<Recommendation>();
   const [recLoading, setRecLoading] = useState(false);
+  const [scenarioBusy, setScenarioBusy] = useState(false);
 
   const cases = data?.cases ?? [];
   const selected = cases.find((c) => c.id === selectedId);
@@ -57,6 +58,30 @@ export default function Dashboard() {
   async function toggleOffline() {
     await postJson("/api/offline", { offline: !data?.offline });
     await refresh();
+  }
+
+  async function loadScenario() {
+    setScenarioBusy(true);
+    setNotice(undefined);
+    setRec(undefined);
+    setSelectedId(undefined);
+    const res = await postJson<{ validSos: number; outcome: { duplicates: number; rejectedByReason: Record<string, number> } }>("/api/scenario", { action: "load" });
+    if (res.ok) {
+      const rej = Object.values(res.data.outcome.rejectedByReason).reduce((a, b) => a + b, 0);
+      setNotice({ kind: "success", text: `Escenario simulado cargado: ${res.data.validSos} SOS, ${res.data.outcome.duplicates} duplicados fusionados, ${rej} intentos rechazados. Sismo ficticio.` });
+    } else setNotice({ kind: "error", text: "No se pudo cargar el escenario." });
+    await refresh();
+    setScenarioBusy(false);
+  }
+
+  async function benchmark() {
+    setScenarioBusy(true);
+    const res = await postJson<{ count: number; mode: string; totalMs: number; perSosMs: number; manualMinutes: number; speedup: number }>("/api/scenario", { action: "benchmark" });
+    if (res.ok) {
+      const b = res.data;
+      setNotice({ kind: "success", text: `Benchmark: ${b.count} SOS priorizados en ${b.totalMs} ms (${b.perSosMs} ms/SOS, modo ${b.mode}). Revisión manual estimada: ${b.manualMinutes} min (2 min por SOS, supuesto) → ~${b.speedup.toLocaleString("es-CO")} veces más rápido.` });
+    } else setNotice({ kind: "error", text: "No se pudo ejecutar el benchmark." });
+    setScenarioBusy(false);
   }
 
   async function recommend() {
@@ -93,6 +118,8 @@ export default function Dashboard() {
           <Badge tone={data?.mode === "rules" ? "critical" : data?.mode === "meta" ? "inverse" : "default"} title="Modo de IA activo">
             <span className={s.mode}>{data?.modeLabel ?? "…"}</span>
           </Badge>
+          <Button size="sm" onClick={loadScenario} disabled={scenarioBusy}>{scenarioBusy ? "Cargando…" : "Cargar escenario Cali 2026"}</Button>
+          <Button size="sm" onClick={benchmark} disabled={scenarioBusy}>Benchmark 100 SOS</Button>
           <Button size="sm" selected={!!data?.offline} onClick={toggleOffline} disabled={!data}>Simular caída de internet</Button>
         </div>
       </header>

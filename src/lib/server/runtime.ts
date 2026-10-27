@@ -5,7 +5,7 @@ export interface Runtime {
   /** "Simular caída de internet": forces level-3 rules everywhere. */
   offline: boolean;
   /** Mesh node positions by id (filled by the scenario / mesh simulator). */
-  nodes: Map<string, { lat: number; lon: number }>;
+  nodes: Map<string, { lat: number; lon: number; kind?: string }>;
   /** Fully reassembled audio by case id. */
   audioStore: Map<string, Uint8Array>;
   /** Audio that arrived before its SOS. */
