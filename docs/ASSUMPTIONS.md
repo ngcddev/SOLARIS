@@ -25,6 +25,13 @@
 - The packet header's `urgency` is an unauthenticated hint; the real priority comes from triage.
 - Language: code, docs and UI are in English. Citizen messages in the demo scenario stay in Spanish on purpose (they model SOS from Cali), the rules engine understands Spanish and English keywords, and the transcription language hint is `es`.
 
+- Multimodal cross-check: the photos are sent to Muse Wonder as image parts next to the structured report. In simulated mode the same rules (`src/lib/ai/reports.ts`) produce the verdict, so demos are deterministic. The verdict adds +8 (consistent) or -15 (contradictory) to confidence and never discards a case; "insufficient" changes nothing.
+- Shift handover: Wonder receives a number-only JSON snapshot and must use only numbers present in it; output is validated and screened for medical language. The simulated/fallback version is a deterministic template.
+- Level 2 (local Llama) only covers triage. Transcription, vision and the analyst tasks use rules when the internet is down. It is enabled only if `LOCAL_LLM_URL` is set (Ollama-compatible `/api/chat`, default model `llama3.2:3b`); there is no automatic reachability switch: if the server is down, triage falls back to rules and the dashboard shows a notice.
+- Impact numbers in the dashboard are computed from live state. "Manual review avoided" uses the same assumed 2 minutes per SOS as the benchmark.
+- The evaluation dataset labels are written by us from documented rules. The rules engine was calibrated against this same dataset, so its numbers are optimistic; the Meta and local rows are the ones to trust (see `docs/EVALUATION.md`).
+- The app uses the Supabase repository only when `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set; some state is still process-local (see `docs/DEPLOYMENT.md`).
+
 ## Findings from https://dev.meta.ai/docs (checked on 2026-10-27)
 Confirmed in the public documentation:
 - Base URL `https://api.meta.ai/v1`, `Authorization: Bearer <key>`; the environment variable in the docs is `MODEL_API_KEY` (both `META_API_KEY` and `MODEL_API_KEY` are accepted here).
@@ -40,6 +47,9 @@ Items that still need confirming with real API access (credits pending). Each on
 4. `src/lib/ai/config.ts`: current Spark ID (`muse-spark-1.3` per the docs) and that `muse-wonder-1.0` stays available outside preview.
 5. `src/lib/geo/geo.ts`: USGS feed URL.
 6. Real rate limits, per-call cost and latency of Spark/Wonder (the benchmark in `meta` mode includes network latency).
+7. `src/lib/ai/meta.ts`: multimodal message format for Muse Wonder (OpenAI-style `image_url` parts assumed) and image size limits, used by the cross-check.
+8. `src/lib/ai/local.ts`: Ollama structured outputs (`format` as a JSON schema) on the Ollama version installed.
+9. Whether Wonder's 1M-token context lets us send the full case history to the handover report instead of a number-only snapshot (the snapshot is the safe default).
 
 ## AI behavior
 - Without `META_API_KEY` => simulated mode (deterministic mock derived from the content). With "Simulate internet outage" => level 3 (rules), no external calls.
