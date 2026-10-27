@@ -22,6 +22,7 @@
 - Field photos are kept in memory as data URLs (max ~6 MB); in production they would go to a private bucket.
 - A synthetic "sample image" lets the photo flow be demoed without a real picture; it is labelled as such.
 - State is in memory: restarting the server wipes everything (the Postgres schema is in `supabase/schema.sql`, not implemented).
+- Offline SOS are queued on the phone and re-signed with a fresh timestamp and the same message id on retry (see `docs/PWA.md`); the real mesh would need a similar store-and-forward rule.
 - The packet header's `urgency` is an unauthenticated hint; the real priority comes from triage.
 - Language: code, docs and UI are in English. Citizen messages in the demo scenario stay in Spanish on purpose (they model SOS from Cali), the rules engine understands Spanish and English keywords, and the transcription language hint is `es`.
 

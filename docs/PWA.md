@@ -27,6 +27,7 @@ The app opens at `/citizen` in standalone mode; the command center is reachable 
 ## Honest limits
 
 - Browsers cannot run a **background Bluetooth mesh**: relaying SOS packets between phones while the app is closed needs a native app. That is on the roadmap, not in this MVP (the mesh is simulated at `/mesh`).
-- The offline shell lets the citizen simulator *open*; submitting an SOS still needs the server. A queue that retries on reconnect is not implemented yet.
+- **Offline outbox (implemented):** if sending fails (no network or a 5xx), the SOS request is saved in IndexedDB on the phone and retried automatically when the browser goes online and every 15 s while something waits. The packet is **rebuilt at send time with a fresh timestamp and the same message id**: the server rejects stale timestamps (replay protection, 10 min), while the stable id keeps deduplication working if an earlier attempt actually got through. The center public key is cached in localStorage so the phone can seal an SOS even when the app is opened with no connection. Limits: the app must have been loaded online once, and a retry is attempted only while the page is open (no background sync); the server stamps the *arrival* time, so waiting time in the queue is not counted as the victim's waiting time.
+- Not verified in a real PWA install: the in-app test browser does not support service workers, so offline *page loading* was not exercised end to end; the outbox itself was verified in the browser by cutting `/api/ingest` and restoring it.
 - iOS limits service-worker storage and may evict caches of rarely used PWAs.
 - Icons are simple generated black-and-white placeholders until the design system lands.

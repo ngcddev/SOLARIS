@@ -1,18 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-
-  MAX_SOS_PACKET_BYTES,
-  buildAudioPacket,
-  buildSosPacket,
-  fromBase64,
-  initCrypto,
-  randomBytes,
-  toBase64,
-  type EmergencyType,
-  type WhoKind,
-} from "@/lib/packet";
+import { MAX_SOS_PACKET_BYTES, fromBase64, initCrypto, randomBytes, toHex, type EmergencyType, type WhoKind } from "@/lib/packet";
+import { buildPackets, flushOutbox, indexedDbStore, loadCenterKey, type OutboxItem, type OutboxStore, type PostOutcome, type WirePacket } from "@/lib/client/outbox";
 import { loadIdentity } from "@/lib/client/identity";
 import { startRecording, type Recording } from "@/lib/client/wav";
 import DynamicMap from "../map/DynamicMap";
@@ -22,7 +12,6 @@ import s from "./citizen.module.css";
 
 const MAX_AUDIO_S = 15;
 const CODEC2_BPS = 1200;
-const AUDIO_CHUNK = 60_000;
 
 const TYPES: { id: EmergencyType; label: string }[] = [
   { id: "trapped", label: "Trapped" },
@@ -53,7 +42,20 @@ const SPEECH: Record<number, string> = {
 };
 
 type Loc = { lat: number; lon: number; source: "gps" | "map" | "list" };
-type Sent = { sosBytes: number; audioBytes: number; audioSeconds: number; status: string };
+type Sent = { sosBytes: number; audioBytes: number; audioSeconds: number; queued: boolean };
+
+/** Network failures (offline, 5xx) are retried later; anything the server answered is a final outcome. */
+async function postPackets(packets: WirePacket[]): Promise<PostOutcome> {
+  try {
+    const res = await fetch("/api/ingest", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ packets }) });
+    if (res.status >= 500) return { kind: "network_error" };
+    if (!res.ok) return { kind: "result", status: "rejected", reason: "invalid_request" };
+    const data = (await res.json()) as { results: { status: "accepted" | "duplicate" | "rejected"; reason?: string }[] };
+    return { kind: "result", status: data.results[0].status, reason: data.results[0].reason };
+  } catch {
+    return { kind: "network_error" };
+  }
+}
 
 export default function CitizenApp() {
   const [ready, setReady] = useState<"loading" | "ok" | "error">("loading");
@@ -73,21 +75,55 @@ export default function CitizenApp() {
   const [sendError, setSendError] = useState("");
   const [sent, setSent] = useState<Sent | null>(null);
   const rec = useRef<Recording | null>(null);
+  const store = useRef<OutboxStore | null>(null);
+  const [pending, setPending] = useState(0);
+  const getStore = () => (store.current ??= indexedDbStore());
+
+  /** Retries queued SOS; called on start, when the browser goes online, and periodically while something waits. */
+  const flush = useCallback(async () => {
+    if (!centerKey) return;
+    try {
+      const identity = await loadIdentity();
+      const res = await flushOutbox({ store: getStore(), identity, centerPublicKey: centerKey, post: postPackets });
+      setPending(res.remaining);
+    } catch {
+      /* try again later */
+    }
+  }, [centerKey]);
 
   useEffect(() => {
     (async () => {
       try {
         await initCrypto();
         await loadIdentity();
-        const r = await fetch("/api/center-key");
-        if (!r.ok) throw new Error("center-key");
-        setCenterKey(fromBase64((await r.json()).publicKey));
+        let storage: Storage | null = null;
+        try { storage = localStorage; } catch { /* storage unavailable */ }
+        const key = await loadCenterKey(async () => {
+          const r = await fetch("/api/center-key");
+          if (!r.ok) throw new Error("center-key");
+          return (await r.json()).publicKey as string;
+        }, storage);
+        if (!key) throw new Error("no center key");
+        setCenterKey(fromBase64(key));
+        setPending((await getStore().list()).length);
         setReady("ok");
       } catch {
         setReady("error");
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (!centerKey) return;
+    void flush();
+    const onOnline = () => void flush();
+    window.addEventListener("online", onOnline);
+    const timer = setInterval(() => void flush(), 15_000);
+    return () => {
+      window.removeEventListener("online", onOnline);
+      clearInterval(timer);
+    };
+  }, [centerKey, flush]);
 
   const speak = useCallback((text: string) => {
     try {
@@ -155,25 +191,22 @@ export default function CitizenApp() {
     setSendError("");
     try {
       const identity = await loadIdentity();
-      const msgId = randomBytes(16);
-      const opts = { identity, centerPublicKey: centerKey };
-      const sosPacket = buildSosPacket({ type, who, count, lat: loc.lat, lon: loc.lon }, { ...opts, msgId, urgency: URGENCY[type] });
-      const packets = [{ packet: toBase64(sosPacket), path: ["tel-sim", "gw-1"] }];
-      if (audio) {
-        const chunk = Math.max(AUDIO_CHUNK, Math.ceil(audio.wav.length / 16));
-        const total = Math.ceil(audio.wav.length / chunk);
-        for (let i = 0; i < total; i++) {
-          const part = audio.wav.slice(i * chunk, (i + 1) * chunk);
-          packets.push({ packet: toBase64(buildAudioPacket({ parentId: msgId, index: i, total, data: part }, opts)), path: ["tel-sim", "gw-1"] });
-        }
+      const item: OutboxItem = { id: toHex(randomBytes(16)), createdAt: Date.now(), sos: { type, who, count, lat: loc.lat, lon: loc.lon }, urgency: URGENCY[type], audio: audio?.wav, attempts: 0 };
+      const packets = buildPackets(item, identity, centerKey, Date.now());
+      const outcome = await postPackets(packets);
+      const base = { sosBytes: Math.round((packets[0].packet.length * 3) / 4), audioBytes: audio?.wav.length ?? 0, audioSeconds: audio?.seconds ?? 0 };
+      if (outcome.kind === "network_error") {
+        // No connection: keep the request on this phone and retry automatically.
+        await getStore().put(item);
+        setPending((await getStore().list()).length);
+        setSent({ ...base, queued: true });
+        if (voiceGuide) speak("No connection. Your request is saved and will be sent automatically.");
+      } else if (outcome.status === "rejected") {
+        throw new Error(outcome.reason ?? "rejected");
+      } else {
+        setSent({ ...base, queued: false });
+        if (voiceGuide) speak("Your help request was sent. Stay calm.");
       }
-      const res = await fetch("/api/ingest", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ packets }) });
-      if (!res.ok) throw new Error("ingest");
-      const data = (await res.json()) as { results: { status: string; reason?: string }[] };
-      const first = data.results[0];
-      if (first.status !== "accepted") throw new Error(first.reason ?? first.status);
-      setSent({ sosBytes: sosPacket.length, audioBytes: audio?.wav.length ?? 0, audioSeconds: audio?.seconds ?? 0, status: first.status });
-      if (voiceGuide) speak("Your help request was sent. Stay calm.");
     } catch {
       setSendError("Could not send. Check your connection and try again.");
     } finally {
@@ -204,13 +237,30 @@ export default function CitizenApp() {
         </Button>
       </header>
       <p className={s.meta}>Simulator: this “phone” generates real signed and encrypted packets.</p>
+      {pending > 0 && !sent?.queued && <StateNotice kind="loading">{pending} request(s) saved on this phone, waiting for a connection…</StateNotice>}
 
       {sent ? (
         <section aria-labelledby="done" className={s.shell} style={{ padding: 0, minHeight: 0 }}>
           <StateNotice kind="success">
-            <strong id="done">Help request sent.</strong>
-            <br />
-            A rescuer will review it. Stay somewhere safe and visible if you can.
+            {sent.queued && pending === 0 ? (
+              <>
+                <strong id="done">Your request was sent automatically.</strong>
+                <br />
+                The connection returned and it reached the command center. Stay somewhere safe and visible if you can.
+              </>
+            ) : sent.queued ? (
+              <>
+                <strong id="done">No connection: your request is saved on this phone.</strong>
+                <br />
+                It will be sent automatically as soon as the connection returns. Waiting to send: {pending}. Stay somewhere safe and visible if you can.
+              </>
+            ) : (
+              <>
+                <strong id="done">Help request sent.</strong>
+                <br />
+                A rescuer will review it. Stay somewhere safe and visible if you can.
+              </>
+            )}
           </StateNotice>
           <p className={s.meta}>
             SOS packet: {sent.sosBytes} bytes (limit {MAX_SOS_PACKET_BYTES}).
