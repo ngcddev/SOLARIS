@@ -1,4 +1,5 @@
-import { MemoryRepository, getRepository } from "../repo/memory";
+import { MemoryRepository } from "../repo/memory";
+import { getRepository } from "../repo";
 import { buildCaliScenario } from "../scenario/cali2026";
 import {
   buildSosPacket,
@@ -14,8 +15,8 @@ import { currentMode, ensureSeeded, getState, processPacket, setEvents } from ".
 import type { Repository } from "../repo/Repository";
 import { mulberry32, offsetM } from "../mesh/graph";
 
-/** Estimated minutes a human needs to read, locate and rank one SOS by hand (assumption, see docs/ASSUMPTIONS.md). */
-export const MANUAL_MINUTES_PER_SOS = 2;
+export { MANUAL_MINUTES_PER_SOS } from "../impact";
+import { MANUAL_MINUTES_PER_SOS } from "../impact";
 
 export interface ScenarioRunSummary {
   eventPlace: string;

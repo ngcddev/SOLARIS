@@ -85,7 +85,7 @@ describe("mode selection and graceful degradation", () => {
   });
   it("mock transcription decodes the simulated audio fixture", async () => {
     const audio = new TextEncoder().encode(SIMULATED_AUDIO_PREFIX + "hay un bebé atrapado");
-    expect((await mockProviders.transcription.transcribe({ audio, keywords: [], language: "es" })).text).toBe("hay un bebé atrapado");
+    expect((await mockProviders.transcription!.transcribe({ audio, keywords: [], language: "es" })).text).toBe("hay un bebé atrapado");
   });
 });
 
@@ -111,7 +111,7 @@ describe("analyst assignment", () => {
     const p: ProviderSet = {
       ...mockProviders,
       source: "meta",
-      analyst: { recommend: async () => ({ notes: "", assignments: [
+      analyst: { ...mockProviders.analyst!, recommend: async () => ({ notes: "", assignments: [
         { caseId: "a", teamId: "t1", rationale: "cercano" },
         { caseId: "b", teamId: "t1", rationale: "doble reserva" },
         { caseId: "zzz", teamId: "t2", rationale: "inexistente" },

@@ -1,4 +1,4 @@
-import { photoFindingsSchema, analystJsonSchema, analystOutputSchema, triageJsonSchema, triageOutputSchema } from "./schemas";
+import { photoFindingsSchema, analystJsonSchema, analystOutputSchema, crossCheckJsonSchema, crossCheckOutputSchema, handoverJsonSchema, handoverOutputSchema, triageJsonSchema, triageOutputSchema } from "./schemas";
 import type { MetaConfig } from "./config";
 import { EMERGENCY_KEYWORDS } from "./config";
 import type { PhotoFinding } from "../domain/types";
@@ -22,6 +22,16 @@ const ANALYST_SYSTEM =
   "Propose an assignment (one team per case, one case per team) with a brief logistical rationale in English. " +
   "Do not give medical advice. The final decision belongs to the rescuer. Return ONLY JSON matching the schema.";
 
+const CROSSCHECK_SYSTEM =
+  "You are a verification analyst at a rescue command center. You receive a structured help request, its audio transcript (may be in Spanish) " +
+  "and the segmentation findings of field photos, plus the photos themselves. Decide whether the imagery is consistent with the report, contradicts it, " +
+  "or is insufficient. Give short, factual reasons in English about what is visible and what is not. NEVER give medical advice. Return ONLY JSON matching the schema.";
+
+const HANDOVER_SYSTEM =
+  "You write the shift-handover situation report of a rescue command center from a JSON snapshot of the operation. " +
+  "Be concise and factual, in English. List risks and concrete next actions for the incoming shift. Use ONLY numbers present in the snapshot. " +
+  "NEVER give medical advice. The final decisions belong to the rescuers. Return ONLY JSON matching the schema.";
+
 async function metaFetch(cfg: MetaConfig, path: string, init: RequestInit): Promise<Response> {
   const res = await fetch(`${cfg.baseUrl}${path}`, {
     ...init,
@@ -33,7 +43,7 @@ async function metaFetch(cfg: MetaConfig, path: string, init: RequestInit): Prom
 }
 
 /** Chat Completions (OpenAI-compatible) with JSON-schema structured output. */
-async function structuredChat(cfg: MetaConfig, model: string, system: string, user: unknown, name: string, schema: object): Promise<unknown> {
+async function structuredChat(cfg: MetaConfig, model: string, system: string, user: unknown, name: string, schema: object, images: string[] = []): Promise<unknown> {
   // VERIFY: response_format shape for structured output (OpenAI-style json_schema assumed).
   const res = await metaFetch(cfg, "/chat/completions", {
     method: "POST",
@@ -43,7 +53,8 @@ async function structuredChat(cfg: MetaConfig, model: string, system: string, us
       temperature: 0,
       messages: [
         { role: "system", content: system },
-        { role: "user", content: JSON.stringify(user) },
+        // VERIFY: multimodal content parts (OpenAI-style image_url) for Muse Wonder.
+        { role: "user", content: images.length ? [{ type: "text", text: JSON.stringify(user) }, ...images.map((url) => ({ type: "image_url", image_url: { url } }))] : JSON.stringify(user) },
       ],
       response_format: { type: "json_schema", json_schema: { name, strict: true, schema } },
     }),
@@ -84,6 +95,15 @@ export function metaProviders(cfg: MetaConfig): ProviderSet {
       // Wonder is expensive: only called on demand from the "Recommend assignment" button.
       const raw = await structuredChat(cfg, cfg.analystModel, ANALYST_SYSTEM, input, "assignment", analystJsonSchema);
       return analystOutputSchema.parse(raw);
+    },
+    async crossCheck({ images, ...input }) {
+      // Wonder is multimodal: the photos travel with the report so it can compare what it sees with what was reported.
+      const raw = await structuredChat(cfg, cfg.analystModel, CROSSCHECK_SYSTEM, input, "cross_check", crossCheckJsonSchema, images ?? []);
+      return crossCheckOutputSchema.parse(raw);
+    },
+    async handover(input) {
+      const raw = await structuredChat(cfg, cfg.analystModel, HANDOVER_SYSTEM, input, "handover", handoverJsonSchema);
+      return handoverOutputSchema.parse(raw);
     },
   };
 

@@ -1,5 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { getRepository } from "../src/lib/repo/memory";
+import { getRepository } from "../src/lib/repo";
 import { resetRuntime } from "../src/lib/server/runtime";
 import { getCenterKeys } from "../src/lib/server/center";
 import { applyAction, getState, processPacket, recommendAssignments, setOffline } from "../src/lib/server/service";

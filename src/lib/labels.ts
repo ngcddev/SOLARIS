@@ -18,7 +18,7 @@ export const STATUS_LABEL: Record<CaseStatus, string> = {
   closed: "Closed",
 };
 export const PRIORITY_LABEL: Record<Priority, string> = { P1: "P1 · Critical", P2: "P2 · High", P3: "P3 · Medium", P4: "P4 · Low" };
-export const SOURCE_LABEL = { meta: "Meta API", mock: "Simulated", rules: "Rules" } as const;
+export const SOURCE_LABEL = { meta: "Meta API", mock: "Simulated", local: "Local Llama", rules: "Rules" } as const;
 
 export function fmtWait(ms: number): string {
   const m = Math.max(0, Math.floor(ms / 60000));

@@ -41,3 +41,18 @@ export const photoFindingsSchema = z.array(
 /** JSON schemas sent to the Meta API as structured-output constraints. */
 export const triageJsonSchema = z.toJSONSchema(triageOutputSchema);
 export const analystJsonSchema = z.toJSONSchema(analystOutputSchema);
+
+export const crossCheckOutputSchema = z.object({
+  verdict: z.enum(["consistent", "contradictory", "insufficient"]),
+  reasons: z.array(z.string().min(3).max(300)).min(1).max(6),
+});
+
+export const handoverOutputSchema = z.object({
+  headline: z.string().min(5).max(300),
+  summary: z.array(z.string().min(3).max(300)).min(1).max(10),
+  risks: z.array(z.string().min(3).max(300)).min(1).max(8),
+  nextActions: z.array(z.string().min(3).max(300)).min(1).max(8),
+});
+
+export const crossCheckJsonSchema = z.toJSONSchema(crossCheckOutputSchema);
+export const handoverJsonSchema = z.toJSONSchema(handoverOutputSchema);

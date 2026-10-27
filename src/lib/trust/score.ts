@@ -91,6 +91,13 @@ export function computeTrust(c: Case, ctx: TrustContext): TrustBreakdown {
     signals.push({ id: "field_photo", label: "Field photo", weight: 0, value: 1, detail: "Rescuer photo confirms people at the site (+10)" });
   }
 
+  // 7. Multimodal cross-check (report vs. audio vs. photos). It can raise or lower confidence but never discards a case.
+  if (c.crossCheck && c.crossCheck.verdict !== "insufficient") {
+    const ok = c.crossCheck.verdict === "consistent";
+    score += ok ? 8 : -15;
+    signals.push({ id: "cross_check", label: "Multimodal cross-check", weight: 0, value: ok ? 1 : 0, detail: ok ? "Imagery is consistent with the report (+8)" : "Imagery contradicts the report (-15)" });
+  }
+
   score = Math.round(Math.max(0, Math.min(100, score)));
   return { score, signals, lowConfidence: score < LOW_CONFIDENCE_THRESHOLD };
 }

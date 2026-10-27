@@ -63,7 +63,7 @@ async function fileToDataUrl(file: File): Promise<string> {
 }
 
 /** Placeholder picture so the flow can be demoed without a real photo. Clearly labelled as an example. */
-function sampleImage(seed: string): string {
+export function sampleImage(seed: string): string {
   const c = document.createElement("canvas");
   c.width = 800;
   c.height = 560;

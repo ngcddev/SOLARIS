@@ -6,7 +6,7 @@ export const PRIORITIES: Priority[] = ["P1", "P2", "P3", "P4"];
 export type CaseStatus = "new" | "validated" | "false" | "assigned" | "dispatched" | "closed";
 
 /** Where an AI-shaped result came from. Shown in the UI so the operator always knows. */
-export type AiSource = "meta" | "mock" | "rules";
+export type AiSource = "meta" | "mock" | "local" | "rules";
 
 export interface Triage {
   emergencyType: EmergencyType;
@@ -25,7 +25,7 @@ export interface Triage {
 }
 
 export interface TrustSignal {
-  id: "signature" | "seismic" | "corroboration" | "relay_proximity" | "coherence" | "field_photo";
+  id: "signature" | "seismic" | "corroboration" | "relay_proximity" | "coherence" | "field_photo" | "cross_check";
   label: string;
   /** 0..1 contribution quality. */
   value: number;
@@ -56,9 +56,16 @@ export interface PhotoFinding {
   masks: { points: [number, number][]; score: number }[];
 }
 
+export interface CrossCheck {
+  verdict: "consistent" | "contradictory" | "insufficient";
+  reasons: string[];
+  source: AiSource;
+  at: number;
+}
+
 export interface CaseEvent {
   at: number;
-  kind: "received" | "duplicate_path" | "triaged" | "retriaged" | "validated" | "marked_false" | "assigned" | "dispatched" | "closed" | "photo" | "audio" | "trust";
+  kind: "received" | "duplicate_path" | "triaged" | "retriaged" | "validated" | "marked_false" | "assigned" | "dispatched" | "closed" | "photo" | "audio" | "trust" | "cross_check";
   note: string;
 }
 
@@ -83,6 +90,8 @@ export interface Case {
   transcript?: { text: string; source: AiSource };
   audio?: { bytes: number; codec2TheoreticalBytes: number; seconds: number };
   photos: FieldPhoto[];
+  /** Multimodal consistency check between the report, audio and field photos (Muse Wonder). */
+  crossCheck?: CrossCheck;
   assignedTeamId?: string;
   /** Epoch ms when triage finished (for average triage time). */
   triagedAt?: number;

@@ -13,6 +13,19 @@ export function metaConfig(env: Record<string, string | undefined> = process.env
 }
 export type MetaConfig = ReturnType<typeof metaConfig>;
 
+/**
+ * Level 2: an open Meta model (Llama) served locally, e.g. with Ollama. Works with no internet.
+ * Disabled unless LOCAL_LLM_URL is set.
+ */
+export function localConfig(env: Record<string, string | undefined> = process.env) {
+  return {
+    url: (env.LOCAL_LLM_URL || "").replace(/\/$/, ""),
+    model: env.LOCAL_LLM_MODEL || "llama3.2:3b",
+    timeoutMs: Number(env.LOCAL_LLM_TIMEOUT_MS) || 20000,
+  };
+}
+export type LocalConfig = ReturnType<typeof localConfig>;
+
 export const EMERGENCY_KEYWORDS = [
   "atrapado", "atrapados", "escombros", "sangrando", "herido", "bebé", "niño", "incendio", "derrumbe", "ayuda", "auxilio",
 ];

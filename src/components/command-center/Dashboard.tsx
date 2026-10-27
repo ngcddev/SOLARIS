@@ -11,7 +11,11 @@ import DynamicMap, { type MapCircle, type MapMarker } from "../map/DynamicMap";
 import { Badge, Button, StateNotice } from "../ui";
 import CaseDetail from "./CaseDetail";
 import CaseQueue from "./CaseQueue";
-import FieldPhotos from "./FieldPhotos";
+import FieldPhotos, { sampleImage } from "./FieldPhotos";
+import CrossCheckPanel from "./CrossCheckPanel";
+import DemoGuide, { type DemoStep } from "./DemoGuide";
+import HandoverPanel, { type Handover } from "./HandoverPanel";
+import ImpactPanel from "./ImpactPanel";
 import s from "./command-center.module.css";
 
 const CALI: [number, number] = [3.4516, -76.532];
@@ -29,6 +33,8 @@ export default function Dashboard() {
   const [rec, setRec] = useState<Recommendation>();
   const [recLoading, setRecLoading] = useState(false);
   const [scenarioBusy, setScenarioBusy] = useState(false);
+  const [handover, setHandover] = useState<Handover>();
+  const [handoverLoading, setHandoverLoading] = useState(false);
 
   const cases = data?.cases ?? [];
   const selected = cases.find((c) => c.id === selectedId);
@@ -85,6 +91,35 @@ export default function Dashboard() {
     setScenarioBusy(false);
   }
 
+  async function generateHandover() {
+    setHandoverLoading(true);
+    const res = await postJson<Handover>("/api/handover");
+    if (res.ok) setHandover(res.data);
+    else setNotice({ kind: "error", text: "The handover report could not be generated." });
+    setHandoverLoading(false);
+  }
+
+  /** Demo shortcut: attach the labelled sample image to a case and run the multimodal cross-check. */
+  async function demoPhotoAndCrossCheck() {
+    const target = selected ?? cases.find((c) => c.priority === "P1") ?? cases[0];
+    if (!target) return;
+    setSelectedId(target.id);
+    setBusy(true);
+    await postJson(`/api/cases/${target.id}/photo`, { dataUrl: sampleImage(target.id) });
+    await postJson(`/api/cases/${target.id}/cross-check`);
+    await refresh();
+    setBusy(false);
+  }
+
+  async function resetDemo() {
+    await postJson("/api/reset");
+    setSelectedId(undefined);
+    setRec(undefined);
+    setHandover(undefined);
+    setNotice({ kind: "success", text: "Demo reset. Load the scenario to start again." });
+    await refresh();
+  }
+
   async function recommend() {
     setRecLoading(true);
     setNotice(undefined);
@@ -105,6 +140,17 @@ export default function Dashboard() {
 
   const m = data?.metrics;
   const activeCases = cases.filter((c) => c.status !== "closed" && c.status !== "false");
+  const flagged = cases.find((c) => c.needsReview);
+  const demoSteps: DemoStep[] = [
+    { id: "load", title: "Load the Cali 2026 scenario", note: "44 SOS, duplicates over several paths and four kinds of attack (fictional earthquake).", done: cases.length > 0, action: { label: "Load", run: loadScenario, disabled: scenarioBusy } },
+    { id: "false", title: "Open the false SOS", note: "Low confidence: demoted and flagged for review, never discarded.", done: !!selected?.needsReview, action: { label: "Open", run: () => flagged && setSelectedId(flagged.id), disabled: !flagged } },
+    { id: "defenses", title: "Check the active defenses", note: "Replay, invalid signature, burst and revoked identity were blocked before the queue.", done: (data?.rejections.length ?? 0) > 0 },
+    { id: "offline", title: "Simulate an internet outage", note: "AI level drops to local Llama or rules; the queue keeps working.", done: !!data?.offline, action: { label: data?.offline ? "Restore" : "Cut internet", run: toggleOffline, disabled: !data } },
+    { id: "recommend", title: "Recommend an assignment", note: "Muse Wonder proposes; you accept or reject each suggestion.", done: !!rec, action: { label: "Recommend", run: recommend, disabled: recLoading || activeCases.length === 0 } },
+    { id: "accept", title: "Accept a suggestion", note: "A team is assigned only when a person accepts.", done: (data?.teams.some((t) => t.status !== "available") ?? false) },
+    { id: "photo", title: "Add a field photo and cross-check it", note: "SAM 3.1 segments the photo; Wonder compares it with the report and audio.", done: cases.some((c) => !!c.crossCheck), action: { label: "Run on a case", run: demoPhotoAndCrossCheck, disabled: busy || cases.length === 0 } },
+    { id: "handover", title: "Generate the shift handover report", note: "A long-context briefing of the whole operation.", done: !!handover, action: { label: "Generate", run: generateHandover, disabled: handoverLoading || cases.length === 0 } },
+  ];
 
   return (
     <div className={s.page}>
@@ -116,7 +162,7 @@ export default function Dashboard() {
           <Link href="/mesh">Mesh</Link>
         </div>
         <div className={s.controls}>
-          <Badge tone={data?.mode === "rules" ? "critical" : data?.mode === "meta" ? "inverse" : "default"} title="Active AI mode">
+          <Badge tone={data?.mode === "rules" ? "critical" : data?.mode === "meta" || data?.mode === "local" ? "inverse" : "default"} title={data?.localLlm.configured ? `Active AI mode (local Llama configured: ${data.localLlm.model})` : "Active AI mode"}>
             <span className={s.mode}>{data?.modeLabel ?? "…"}</span>
           </Badge>
           <Button size="sm" onClick={loadScenario} disabled={scenarioBusy}>{scenarioBusy ? "Loading…" : "Load Cali 2026 scenario"}</Button>
@@ -134,10 +180,13 @@ export default function Dashboard() {
         <div className={s.metric}><dt>Rejected</dt><dd>{m?.rejected ?? "–"}</dd></div>
       </dl>
 
+      <ImpactPanel impact={data?.impact} />
+
       {!data && !error && <div style={{ padding: "var(--space-4)" }}><StateNotice kind="loading">Connecting to the command center…</StateNotice></div>}
       {error && <div style={{ padding: "var(--space-4)" }}><StateNotice kind="error">No connection to the server. Retrying… (the data shown may be out of date)</StateNotice></div>}
       {data?.degradations.length ? <div style={{ padding: "0 var(--space-4)", paddingTop: "var(--space-3)" }}><StateNotice kind="error">The AI failed ({data.degradations.at(-1)?.stage}); the system continued with rules.</StateNotice></div> : null}
       {notice && <div style={{ padding: "var(--space-3) var(--space-4) 0" }}><StateNotice kind={notice.kind}>{notice.text}</StateNotice></div>}
+      {data && <DemoGuide steps={demoSteps} onReset={resetDemo} />}
 
       {data && (
         <main className={s.body}>
@@ -163,7 +212,12 @@ export default function Dashboard() {
 
           <div className={s.col}>
             <CaseDetail c={selected as Case | undefined} teams={data.teams} busy={busy} onAction={act}>
-              {selected && <FieldPhotos c={selected as Case} onChanged={refresh} />}
+              {selected && (
+                <>
+                  <FieldPhotos c={selected as Case} onChanged={refresh} />
+                  <CrossCheckPanel c={selected as Case} onChanged={refresh} />
+                </>
+              )}
             </CaseDetail>
 
             <section className={s.panel} aria-labelledby="teams-title">
@@ -202,6 +256,8 @@ export default function Dashboard() {
                 </div>
               )}
             </section>
+
+            <HandoverPanel report={handover} loading={handoverLoading} onGenerate={generateHandover} />
 
             <section className={s.panel} aria-labelledby="def-title">
               <div className={s.panelHead}><h2 id="def-title">Active defenses</h2></div>

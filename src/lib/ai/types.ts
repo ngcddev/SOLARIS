@@ -1,7 +1,10 @@
 import type { EmergencyType, WhoKind } from "../packet/types";
 import type { AiSource, PhotoFinding, Priority, Team } from "../domain/types";
+import type { CrossCheckInput, CrossCheckOutput, HandoverInput, HandoverOutput } from "./reports";
 
-export type AiMode = "meta" | "mock" | "rules";
+export type { CrossCheckInput, CrossCheckOutput, HandoverInput, HandoverOutput };
+
+export type AiMode = "meta" | "mock" | "local" | "rules";
 
 export interface TranscriptionInput {
   /** WAV mono PCM16 16 kHz (or the simulated fixture, see mock). */
@@ -66,6 +69,10 @@ export interface AnalystOutput {
 }
 export interface AnalystProvider {
   recommend(input: AnalystInput): Promise<AnalystOutput>;
+  /** Multimodal consistency check: report + audio transcript + field photos (Muse Wonder). */
+  crossCheck(input: CrossCheckInput & { images?: string[] }): Promise<CrossCheckOutput>;
+  /** Long-context situation report for the next shift (Muse Wonder). */
+  handover(input: HandoverInput): Promise<HandoverOutput>;
 }
 
 export interface VisionInput {
@@ -76,10 +83,11 @@ export interface VisionProvider {
   segment(input: VisionInput): Promise<PhotoFinding[]>;
 }
 
+/** A provider set may be partial: the local Llama level only covers triage; everything else uses rules. */
 export interface ProviderSet {
   source: AiSource;
-  transcription: TranscriptionProvider;
   triage: TriageProvider;
-  analyst: AnalystProvider;
-  vision: VisionProvider;
+  transcription?: TranscriptionProvider;
+  analyst?: AnalystProvider;
+  vision?: VisionProvider;
 }

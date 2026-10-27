@@ -1,5 +1,6 @@
 import type { PhotoFinding } from "../domain/types";
 import { greedyAssignment } from "../priority/queue";
+import { crossCheckByRules, handoverByRules } from "./reports";
 import { rescuerJustification, triageByRules } from "./rules";
 import type { AnalystProvider, ProviderSet, TranscriptionProvider, TriageProvider, VisionProvider } from "./types";
 
@@ -44,6 +45,13 @@ export const mockAnalyst: AnalystProvider = {
   async recommend(input) {
     const out = greedyAssignment(input);
     return { ...out, notes: `[Simulated] ${out.notes}` };
+  },
+  // The mock analyst reuses the deterministic rules so demos are reproducible.
+  async crossCheck(input) {
+    return crossCheckByRules(input);
+  },
+  async handover(input) {
+    return handoverByRules(input);
   },
 };
 

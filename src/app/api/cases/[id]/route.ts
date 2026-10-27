@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getRepository } from "@/lib/repo/memory";
+import { getRepository } from "@/lib/repo";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

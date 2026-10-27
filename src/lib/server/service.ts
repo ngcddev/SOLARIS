@@ -1,11 +1,13 @@
 import type { AiMode } from "../ai/types";
-import { MODE_LABEL, runAnalyst, runTranscription, runTriage, runVision, selectMode, type RunOptions } from "../ai/orchestrator";
+import { MODE_LABEL, runAnalyst, runCrossCheck, runHandover, runTranscription, runTriage, runVision, selectMode, type RunOptions } from "../ai/orchestrator";
+import { localConfig } from "../ai/config";
+import { buildHandoverInput, computeImpact } from "../impact";
 import { ingestConfig } from "../config";
 import type { Case, CaseStatus, EarthquakeEvent, Team } from "../domain/types";
 import { ingest, type IngestResult } from "../ingest/pipeline";
 import { fromBase64, toBase64 } from "../packet";
 import { applyTrustToPriority, isActive } from "../priority/queue";
-import { getRepository } from "../repo/memory";
+import { getRepository } from "../repo";
 import { computeTrust } from "../trust/score";
 import { fetchUsgsEvents } from "../geo/geo";
 import { getCenterKeys } from "./center";
@@ -179,6 +181,8 @@ export async function getState() {
     events,
     nodes: [...rt.nodes.entries()].map(([id, p]) => ({ id, ...p })),
     metrics: { ...metrics, prioritized: triaged.length, avgTriageMs: Math.round(avgTriageMs * 10) / 10 },
+    impact: computeImpact(cases, metrics, avgTriageMs, Date.now()),
+    localLlm: { configured: !!localConfig().url, model: localConfig().model },
     rejections: rejections.slice(-30).reverse(),
     degradations: rt.degradations.slice(-5),
     centerPublicKey: toBase64((await getCenterKeys()).publicKey),
@@ -277,4 +281,37 @@ export async function addFieldPhoto(caseId: string, dataUrl: string, now = Date.
 
 export async function setEvents(events: EarthquakeEvent[]) {
   await getRepository().setEvents(events);
+}
+
+/**
+ * Multimodal consistency check (Muse Wonder): the report, the audio transcript and the field photos are
+ * compared. The result adjusts confidence but never discards the case.
+ */
+export async function crossCheckCase(caseId: string, now = Date.now()): Promise<{ ok: boolean; error?: string }> {
+  const repo = getRepository();
+  const c = await repo.getCase(caseId);
+  if (!c) return { ok: false, error: "Case not found" };
+  if (!c.triage) return { ok: false, error: "Case has not been triaged yet" };
+  const out = await runCrossCheck(
+    {
+      report: { type: c.type, reportedPeople: c.triage.people, trapped: c.triage.trapped, hasBabies: c.triage.hasBabies, transcript: c.transcript?.text, coherence: c.triage.coherence },
+      photos: c.photos.map((p) => ({ findings: p.findings })),
+      images: c.photos.slice(-3).map((p) => p.dataUrl).filter(Boolean),
+    },
+    runOptions(),
+  );
+  c.crossCheck = { verdict: out.verdict, reasons: out.reasons, source: out.source, at: now };
+  c.events.push({ at: now, kind: "cross_check", note: `Cross-check: ${out.verdict}` });
+  await repo.saveCase(c);
+  await refreshTrust(now);
+  return { ok: true };
+}
+
+/** Shift handover report: long-context summary of the whole operation (Muse Wonder, on demand). */
+export async function buildHandover(now = Date.now()) {
+  await ensureSeeded();
+  const repo = getRepository();
+  const [cases, teams, metrics] = await Promise.all([repo.listCases(), repo.listTeams(), repo.getMetrics()]);
+  const out = await runHandover(buildHandoverInput(cases, teams, metrics, now), runOptions());
+  return { ...out, generatedAt: now, mode: currentMode(), modeLabel: MODE_LABEL[currentMode()] };
 }

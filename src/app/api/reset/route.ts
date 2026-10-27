@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getRepository } from "@/lib/repo/memory";
+import { getRepository } from "@/lib/repo";
 import { resetRuntime } from "@/lib/server/runtime";
 
 export const runtime = "nodejs";
